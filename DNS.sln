@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Resolver", "Resolver\Resolver.csproj", "{CBAE72F2-849D-4697-AB70-2372B3EA602D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Resolver", "Resolver\ResolverCLI.csproj", "{62E8DE16-39BF-42C5-9E9E-F45FA23F4C87}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Protocol", "Protocol\Protocol.csproj", "{FE95639D-782B-45F1-905E-B2BE92049A46}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "Server\Server.csproj", "{107081BF-6489-45F1-9CA9-845E704C93A6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{107081BF-6489-45F1-9CA9-845E704C93A6}.Debug|x86.ActiveCfg = Debug|x86
+		{107081BF-6489-45F1-9CA9-845E704C93A6}.Debug|x86.Build.0 = Debug|x86
+		{107081BF-6489-45F1-9CA9-845E704C93A6}.Release|x86.ActiveCfg = Release|x86
+		{107081BF-6489-45F1-9CA9-845E704C93A6}.Release|x86.Build.0 = Release|x86
+		{62E8DE16-39BF-42C5-9E9E-F45FA23F4C87}.Debug|x86.ActiveCfg = Debug|x86
+		{62E8DE16-39BF-42C5-9E9E-F45FA23F4C87}.Debug|x86.Build.0 = Debug|x86
+		{62E8DE16-39BF-42C5-9E9E-F45FA23F4C87}.Release|x86.ActiveCfg = Release|x86
+		{62E8DE16-39BF-42C5-9E9E-F45FA23F4C87}.Release|x86.Build.0 = Release|x86
+		{FE95639D-782B-45F1-905E-B2BE92049A46}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{FE95639D-782B-45F1-905E-B2BE92049A46}.Debug|x86.Build.0 = Debug|Any CPU
+		{FE95639D-782B-45F1-905E-B2BE92049A46}.Release|x86.ActiveCfg = Release|Any CPU
+		{FE95639D-782B-45F1-905E-B2BE92049A46}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

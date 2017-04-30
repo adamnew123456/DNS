@@ -1,0 +1,405 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Xml;
+
+using NLog;
+
+using DNSProtocol;
+
+namespace DNSServer
+{
+    /**
+     * The zone represents all the records that we have authoritative
+     * knowledge over. When a query comes in that we're an authority for, we
+     * need to find out what records are relevant.
+     */
+    class DNSZone
+    {
+        private static Logger logger = LogManager.GetCurrentClassLogger();
+
+        private Dictionary<Tuple<Domain, ResourceRecordType>, HashSet<DNSRecord>> zone_records;
+
+        // We want to make sure that we can efficiently check and see if a domain is a part of our zone
+        public DNSRecord StartOfAuthority;
+        private HashSet<Domain> sub_zones;
+        public EndPoint[] Relays;
+
+        public DNSZone(DNSRecord start_of_authority, EndPoint[] relays)
+        {
+            zone_records = new Dictionary<Tuple<Domain, ResourceRecordType>, HashSet<DNSRecord>>();
+            StartOfAuthority = start_of_authority;
+            Relays = relays;
+            sub_zones = new HashSet<Domain>();
+        }
+
+        /**
+         * Registers a new record with the zone.
+         */
+        public void Add(DNSRecord record)
+        {
+            var key = Tuple.Create(record.Name, record.Resource.Type);
+            if (!zone_records.ContainsKey(key))
+            {
+                zone_records[key] = new HashSet<DNSRecord>();
+            }
+
+            zone_records[key].Add(record);
+
+            /*
+			       * This indicates a delegation to another nameserver for a subzone. For example, if our SOA
+			       * is zen.com but we have an NS record for content.zen.com, then we're not responsible for
+			       * content.zen.com and we should resolve it like anything else.
+			       */
+            if (record.Resource.Type == ResourceRecordType.NAME_SERVER &&
+                StartOfAuthority.Name.IsSubdomain(record.Name) &&
+                StartOfAuthority.Name != record.Name)
+            {
+                sub_zones.Add(record.Name);
+            }
+        }
+
+        /**
+         * Gets all records with the given domain and record type in the zone.
+         */
+        public IEnumerable<DNSRecord> Query(Domain domain, ResourceRecordType rtype)
+        {
+            var key = Tuple.Create(domain, rtype);
+            HashSet<DNSRecord> records;
+            zone_records.TryGetValue(key, out records);
+
+            if (records == null)
+            {
+                return new HashSet<DNSRecord>();
+            }
+            else
+            {
+                return records;
+            }
+        }
+
+        /**
+		     * Checks to see if a domain is within the authority of this zone.
+		     */
+        public bool IsAuthorityFor(Domain domain)
+        {
+            if (!StartOfAuthority.Name.IsSubdomain(domain))
+            {
+                return false;
+            }
+
+            foreach (var zone in sub_zones)
+            {
+                if (zone.IsSubdomain(domain))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /**
+		     * Figure out what sub-zone a domain is part of - returns null if there is no such sub-zone.
+		     */
+        public Domain FindSubZone(Domain domain)
+        {
+            if (!StartOfAuthority.Name.IsSubdomain(domain))
+            {
+                return null;
+            }
+
+            foreach (var zone in sub_zones)
+            {
+                if (zone.IsSubdomain(domain))
+                {
+                    return zone;
+                }
+            }
+
+            return null;
+        }
+
+        /**
+         * Produces a new zone from an input XML file.
+         */
+        public static DNSZone Unserialize(XmlDocument config)
+        {
+            DNSRecord start_of_authority = null;
+            var records = new List<DNSRecord>();
+            var relays = new List<EndPoint>();
+
+            if (config.DocumentElement.Name != "zone")
+            {
+                throw new InvalidDataException("Root element must be called zone");
+            }
+
+            foreach (var entry in config.DocumentElement.ChildNodes.OfType<XmlNode>())
+            {
+
+                if (entry.NodeType != XmlNodeType.Element)
+                {
+                    logger.Trace("Ignoring node of type {0}", entry.NodeType);
+                    continue;
+                }
+
+                bool is_record =
+                    entry.Name == "A" ||
+                    entry.Name == "NS" ||
+                    entry.Name == "CNAME" ||
+                    entry.Name == "MX" ||
+                    entry.Name == "SOA";
+
+                if (is_record)
+                {
+                    if (entry.Attributes["name"] == null ||
+                        entry.Attributes["class"] == null ||
+                        entry.Attributes["ttl"] == null)
+                    {
+                        throw new InvalidDataException("Resource records must have 'name', 'class' and 'ttl' attributes");
+                    }
+
+                    var record = new DNSRecord();
+                    record.Name = new Domain(entry.Attributes["name"].Value);
+                    record.AddressClass = AddressClass.INTERNET;
+
+                    if (entry.Attributes["class"].Value != "IN")
+                    {
+                        throw new InvalidDataException("Only address class 'IN' is supported");
+                    }
+
+                    try
+                    {
+                        record.TimeToLive = UInt16.Parse(entry.Attributes["ttl"].Value);
+                    }
+                    catch (InvalidDataException err)
+                    {
+                        throw new InvalidDataException(entry.Attributes["ttl"].Value + " is not a valid TTL");
+                    }
+
+                    IDNSResource resource = null;
+                    switch (entry.Name)
+                    {
+                        case "A":
+                            if (entry.Attributes["address"] == null)
+                            {
+                                throw new InvalidDataException("A record must have address");
+                            }
+
+                            try
+                            {
+                                resource = new AResource();
+                                ((AResource)resource).Address = IPAddress.Parse(entry.Attributes["address"].Value);
+                            }
+                            catch (FormatException err)
+                            {
+                                throw new InvalidDataException(entry.Attributes["address"].Value + " is not a valid IPv4 address");
+                            }
+
+                            logger.Trace("A record: address={0}", ((AResource)resource).Address);
+                            break;
+
+                        case "NS":
+                            if (entry.Attributes["nameserver"] == null)
+                            {
+                                throw new InvalidDataException("NS record must have a nameserver");
+                            }
+
+                            resource = new NSResource();
+                            ((NSResource)resource).Nameserver = new Domain(entry.Attributes["nameserver"].Value);
+
+                            logger.Trace("NS record: nameserver={0}", ((NSResource)resource).Nameserver);
+                            break;
+
+                        case "CNAME":
+                            if (entry.Attributes["alias"] == null)
+                            {
+                                throw new InvalidDataException("CNAME record must have an alias");
+                            }
+
+                            resource = new CNAMEResource();
+                            ((CNAMEResource)resource).Alias = new Domain(entry.Attributes["alias"].Value);
+
+                            logger.Trace("CNAME record: alias={0}", ((CNAMEResource)resource).Alias);
+                            break;
+
+                        case "MX":
+                            if (entry.Attributes["priority"] == null ||
+                                entry.Attributes["mailserver"] == null)
+                            {
+                                throw new InvalidDataException("MX record must have priority and mailserver");
+                            }
+
+                            resource = new MXResource();
+                            ((MXResource)resource).Mailserver = new Domain(entry.Attributes["mailserver"].Value);
+
+                            try
+                            {
+                                ((MXResource)resource).Preference = UInt16.Parse(entry.Attributes["priority"].Value);
+                            }
+                            catch (FormatException err)
+                            {
+                                throw new InvalidDataException(entry.Attributes["priority"].Value + " is not a valid priority value");
+                            }
+
+                            logger.Trace("MX record: priority={0} mailserver={1}",
+                                ((MXResource)resource).Preference,
+                                ((MXResource)resource).Mailserver);
+                            break;
+
+                        case "SOA":
+                            if (entry.Attributes["primary-ns"] == null ||
+                                entry.Attributes["hostmaster"] == null ||
+                                entry.Attributes["serial"] == null ||
+                                entry.Attributes["refresh"] == null ||
+                                entry.Attributes["retry"] == null ||
+                                entry.Attributes["expire"] == null ||
+                                entry.Attributes["min-ttl"] == null)
+                            {
+                                throw new InvalidDataException("SOA record missing one of: primary-ns, hostmaster, serial, refresh, retry, expire and min-ttl");
+                            }
+
+                            resource = new SOAResource();
+                            ((SOAResource)resource).PrimaryNameServer = new Domain(entry.Attributes["primary-ns"].Value);
+                            ((SOAResource)resource).Hostmaster = new Domain(entry.Attributes["hostmaster"].Value);
+
+                            try
+                            {
+                                ((SOAResource)resource).Serial = UInt16.Parse(entry.Attributes["serial"].Value);
+                            }
+                            catch (FormatException err)
+                            {
+                                throw new InvalidDataException(entry.Attributes["serial"].Value + " is not a valid serial number");
+                            }
+
+                            try
+                            {
+                                ((SOAResource)resource).RefreshSeconds = UInt16.Parse(entry.Attributes["refresh"].Value);
+                            }
+                            catch (FormatException err)
+                            {
+                                throw new InvalidDataException(entry.Attributes["refresh"].Value + " is not a valid refresh value");
+                            }
+
+                            try
+                            {
+                                ((SOAResource)resource).RetrySeconds = UInt16.Parse(entry.Attributes["retry"].Value);
+                            }
+                            catch (FormatException err)
+                            {
+                                throw new InvalidDataException(entry.Attributes["retry"].Value + " is not a valid retry value");
+                            }
+
+                            try
+                            {
+                                ((SOAResource)resource).ExpireSeconds = UInt16.Parse(entry.Attributes["expire"].Value);
+                            }
+                            catch (FormatException err)
+                            {
+                                throw new InvalidDataException(entry.Attributes["expire"].Value + " is not a valid expire value");
+                            }
+
+                            try
+                            {
+                                ((SOAResource)resource).MinimumTTL = UInt16.Parse(entry.Attributes["min-ttl"].Value);
+                            }
+                            catch (FormatException err)
+                            {
+                                throw new InvalidDataException(entry.Attributes["min-ttl"].Value + " is not a valid expire value");
+                            }
+
+                            logger.Trace("SOA record: primary-ns={0} hostmaster={1} serial={2} refresh={3} retry={4} expire={5} min-ttl={6}",
+                                ((SOAResource)resource).PrimaryNameServer,
+                                ((SOAResource)resource).Hostmaster,
+                                ((SOAResource)resource).Serial,
+                                ((SOAResource)resource).RefreshSeconds,
+                                ((SOAResource)resource).RetrySeconds,
+                                ((SOAResource)resource).ExpireSeconds,
+                                ((SOAResource)resource).MinimumTTL);
+
+                            break;
+                    }
+
+                    record.Resource = resource;
+
+                    if (record.Resource.Type == ResourceRecordType.START_OF_AUTHORITY)
+                    {
+                        if (start_of_authority == null)
+                        {
+                            logger.Trace("Found SOA: {0}", record);
+                            start_of_authority = record;
+                        }
+                        else
+                        {
+                            throw new InvalidDataException("Cannot have more than one SOA record in zone");
+                        }
+                    }
+                    else
+                    {
+                        logger.Trace("Found other record: {0}", record);
+                        records.Add(record);
+                    }
+                }
+                else if (entry.Name == "relay")
+                {
+                    if (entry.Attributes["address"] == null ||
+                        entry.Attributes["port"] == null)
+                    {
+                        throw new InvalidDataException("relay record must have address and port");
+                    }
+
+                    IPAddress address;
+                    int port;
+
+                    try
+                    {
+                        address = IPAddress.Parse(entry.Attributes["address"].Value);
+                    }
+                    catch (FormatException err)
+                    {
+                        throw new InvalidDataException(entry.Attributes["address"].Value + " is not a valid IPv4 address");
+                    }
+
+                    try
+                    {
+                        port = int.Parse(entry.Attributes["port"].Value);
+                    }
+                    catch (FormatException err)
+                    {
+                        throw new InvalidDataException(entry.Attributes["port"].Value + " is not a valid port");
+                    }
+
+                    relays.Add(new IPEndPoint(address, port));
+                    logger.Trace("Found relay: {0}:{1}", address, port);
+                }
+                else
+                {
+                    throw new InvalidDataException(entry.Name + " is not a valid zone entry");
+                }
+            }
+
+            if (start_of_authority == null)
+            {
+                throw new InvalidDataException("Zone does not have SOA record");
+            }
+
+            var zone = new DNSZone(start_of_authority, relays.ToArray());
+
+            foreach (var record in records)
+            {
+                if (record.TimeToLive < ((SOAResource)start_of_authority.Resource).MinimumTTL)
+                {
+                    logger.Trace("Correcting TTL: Record {0} has smaller TTL than SOA MinTTL {1}",
+                                 record, start_of_authority);
+                    record.TimeToLive = ((SOAResource)start_of_authority.Resource).MinimumTTL;
+                }
+
+                zone.Add(record);
+            }
+
+            return zone;
+        }
+    }
+}
