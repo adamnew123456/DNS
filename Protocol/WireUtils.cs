@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
 
 namespace DNSProtocol
@@ -428,7 +430,6 @@ namespace DNSProtocol
             return (byte)stream.ReadByte();
         }
 
-
         /**
          * Reads a fixed number of bytes from the input stream.
          */
@@ -456,6 +457,14 @@ namespace DNSProtocol
             var bytes = ReadBytes(4);
             return (UInt32)((bytes[0] << 24) + (bytes[1] << 16) + (bytes[2] << 8) + bytes[3]);
         }
+
+		/**
+		 * Reads an IPv4 address from the input stream.
+		 */
+		public IPAddress ReadIPv4Address()
+		{
+			return new IPAddress(ReadBytes(4));
+		}
 
         /**
          * Reads a domain name from the input stream.
@@ -557,6 +566,19 @@ namespace DNSProtocol
             ToNetworkEndianness(bytes);
             WriteBytes(bytes);
         }
+
+		/**
+		 * Writes an IPv4 address to the input stream.
+		 */
+		public void WriteIPv4Address(IPAddress address)
+		{
+			if (address.AddressFamily != AddressFamily.InterNetwork)
+			{
+				throw new FormatException("Cannot serialize IPv6 addresses via WriteIPv4Address");
+			}
+
+			WriteBytes(address.GetAddressBytes());
+		}
 
         private class ByteHole : IOutputHole<byte>
         {

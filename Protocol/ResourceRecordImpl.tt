@@ -1,0 +1,278 @@
+<#@ template debug="true" language="C#" hostspecific="true" #>
+<#@ output extension=".cs" #>
+<#@ assembly name="System.Core" #>
+<#@ assembly name="System.Xml" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Xml" #>
+
+using System;
+using System.Collections.Generic;
+using System.Net;
+
+namespace DNSProtocol
+{
+<#
+// This is a generator that takes XML (see ProtocolDescriptionlxml) and generates
+// code from it that is responsible for implementing:
+//
+//  - Equals (both object and IEquatable<IDNSResource>)
+//  - GetHashCode
+//  - ToString
+//  - Serialize
+//  - Unserialize
+
+var xmldoc = new XmlDocument();
+xmldoc.Load(Host.ResolvePath("ProtocolDescription.xml"));
+
+if (xmldoc.DocumentElement.Name != "dns") 
+{
+	throw new InvalidDataException("Root node must be named <dns>");
+}
+
+// This mapes type names into both their 'equality method' (== or Equals)
+// as well as their serializer (the * for Write* methods on DNSOutputStream
+// and Read* methods on DNSInputStream) 
+var eq_methods = new Dictionary<string, string>();
+var serializers = new Dictionary<string, string>();
+bool found_types = false;
+
+foreach (object toplevel_ in xmldoc.DocumentElement.ChildNodes)
+{
+	var toplevel = (XmlElement)toplevel_;
+	if (toplevel.NodeType != XmlNodeType.Element)
+	{
+		continue;
+	}
+
+	// Record all the types, so that they can be referred to later in rr definitions
+	if (toplevel.Name == "types")
+	{
+	    found_types = true;
+		foreach (object type_ in toplevel.ChildNodes)
+		{
+		    var type = (XmlNode)type_;
+			if (type.NodeType != XmlNodeType.Element)
+			{
+				continue;
+			}
+
+			if (type.Name != "type")
+			{
+				throw new InvalidDataException("<types> block can only contain <type> nodes");
+			}
+
+			var name_attr = type.Attributes["name"];
+			var eq_attr = type.Attributes["eq"];
+			var serialize_attr = type.Attributes["serialize"];
+
+			if (name_attr == null || eq_attr == null || serialize_attr == null)
+			{
+				throw new InvalidDataException("<type> node must have name, eq and serialize attributes");
+			}
+
+			if (eq_attr.Value != "method" && eq_attr.Value != "operator")
+			{
+				throw new InvalidDataException("<type> eq attribute must be 'method' or 'operator'");
+			}
+
+			Console.Error.WriteLine("==> " + name_attr.Value + ": " + eq_attr.Value);
+			eq_methods[name_attr.Value] = eq_attr.Value;
+			serializers[name_attr.Value] = serialize_attr.Value;
+		}
+	}
+	else if (toplevel.Name == "rr")
+	{
+		if (!found_types)
+		{
+			throw new InvalidDataException("<types> must be defined before <rr>");
+		}
+
+		var class_name = toplevel.Attributes["name"];
+		var class_type = toplevel.Attributes["type"];
+
+		if (class_name == null || class_type == null)
+		{
+			throw new InvalidDataException("<rr> must have 'name' and 'type' attributes");
+		}
+
+		var field_names = new List<string>();
+		var field_types = new List<string>();
+		var field_eqs = new List<string>();
+		var field_serializers = new List<string>();
+#>
+    class <#= class_name.Value #>Resource : IDNSResource 
+    {        
+	    public ResourceRecordType Type
+	    {
+		    get { return ResourceRecordType.<#= class_type.Value #>; }
+	    }
+
+<#
+		// First, record all the information about each field, and generate the field
+		// definition in the output class
+		foreach (object field_ in toplevel.ChildNodes)
+		{
+			var field = (XmlNode)field_;
+			if (field.NodeType != XmlNodeType.Element)
+			{
+				continue;
+			}
+
+			if (field.Name != "field")
+			{
+				throw new InvalidDataException("<rr> block can only contain <field> nodes");
+			}
+
+			var name_attr = field.Attributes["name"];
+			var type_attr = field.Attributes["type"];
+
+			if (name_attr == null || type_attr == null)
+			{
+				throw new InvalidDataException("<field> node " + field.OuterXml + " must have name and type attributes");
+			}
+
+			if (!eq_methods.ContainsKey(type_attr.Value))
+			{
+				throw new InvalidDataException("<field> type " + type_attr.Value + " is invalid");
+			}
+
+			field_names.Add(name_attr.Value);
+			field_types.Add(type_attr.Value);
+			field_eqs.Add(eq_methods[type_attr.Value]);
+			field_serializers.Add(serializers[type_attr.Value]);
+
+#>
+	    public readonly <#= type_attr.Value #> <#= name_attr.Value #>;
+<#
+		}
+
+		// Next, generate the constructor
+		var arg_list = String.Join(",",
+			field_types.Zip(field_names, 
+							(type, name) => type + " " + name + "_"));
+#>
+        public <#= class_name.Value #>Resource(<#= arg_list #>) {
+<#
+		foreach (var field in field_names)
+		{
+#>
+		    <#= field #> = <#= field #>_;
+<#
+		}
+#>
+		}
+
+		public override bool Equals(object other)
+		{
+
+			if (!(other is IDNSResource))
+			{
+				return false;
+			}
+
+			return Equals((IDNSResource)other);
+		}
+
+		public bool Equals(IDNSResource other)
+		{
+			if (!(other is <#= class_name.Value #>Resource))
+			{
+				return false;
+			}
+
+			var other_resource = (<#= class_name.Value #>Resource)other;
+			return
+<#		
+		for (var i = 0; i < field_names.Count; i++) {
+			var field_name = field_names[i];
+			var field_eq = field_eqs[i];
+
+			if (i > 0)
+			{
+#>
+                   && <#
+			}
+
+			switch (field_eq)
+			{
+			case "method":
+#>                 this.<#= field_name #>.Equals(other_resource.<#= field_name #>) 
+<#
+				break;
+			case "operator":
+#>                 this.<#= field_name #> == other_resource.<#= field_name #> 
+<#
+				break;
+			}
+		}
+
+#>            ;
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked {
+				int hash = 17;
+<#
+		foreach (var field in field_names)
+		{
+#>                
+                hash = hash * 29 + <#= field #>.GetHashCode();<#
+		}
+#>
+
+				return hash;
+			}
+		}
+
+		public override string ToString()
+		{
+			string buffer = "<#= class_name.Value #>[";
+<#
+		foreach (var field in field_names)
+		{
+#>
+            buffer += " <#= field #>=" + <#= field #>;
+<#
+		}
+#>
+			return buffer + "]";
+		}
+
+		public void Serialize(DNSOutputStream stream)
+		{
+<#
+
+		for (var i = 0; i < field_names.Count; i++)
+		{
+#>          stream.Write<#= field_serializers[i] #>(<#= field_names[i] #>);
+<#
+		}
+#>
+		}
+
+		public static <#= class_name.Value #>Resource Unserialize(DNSInputStream stream, UInt16 size)
+		{
+			return new <#= class_name.Value #>Resource(
+<#
+		for (var i = 0; i < field_names.Count; i++)
+		{
+			if (i > 0) 
+			{
+#>                ,<#
+			}
+
+#>				stream.Read<#= field_serializers[i] #>()
+<#
+		}
+#>			);
+		}
+	}
+<#	
+	}
+}
+#>
+}

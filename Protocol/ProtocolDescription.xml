@@ -1,0 +1,41 @@
+﻿<dns>
+  <types>
+	<!-- eq="method" indicates that Equals will be used to compare IPAddress values 
+		 serialize="IPv4Address" indicates that ReadIPv4Address will be used to unserialize
+		     IPAddress values and WriteIPv4Address will be used to serialize them.
+		-->
+    <type name="IPAddress" eq="method" serialize="IPv4Address" />
+
+	<!-- eq="operator" indicates that == will be used to compare Domain values -->
+    <type name="Domain" eq="operator" serialize="Domain" />
+    <type name="UInt32" eq="operator" serialize="UInt32" />
+    <type name="UInt16" eq="operator" serialize="UInt16" />
+  </types>
+
+  <rr name="A" type="HOST_ADDRESS">
+    <field name="Address" type="IPAddress" />
+  </rr>
+
+  <rr name="NS" type="NAME_SERVER">
+    <field name="Nameserver" type="Domain" />
+  </rr>
+
+  <rr name="SOA" type="START_OF_AUTHORITY">
+    <field name="PrimaryNameServer" type="Domain" />
+    <field name="Hostmaster" type="Domain" />
+    <field name="Serial" type="UInt32" />
+    <field name="RefreshSeconds" type="UInt32" />
+    <field name="RetrySeconds" type="UInt32" />
+    <field name="ExpireSeconds" type="UInt32" />
+    <field name="MinimumTTL" type="UInt32" />
+  </rr>
+
+  <rr name="CNAME" type="CANONICAL_NAME">
+    <field name="Alias" type="Domain" />
+  </rr>
+
+  <rr name="MX" type="MAIL_EXCHANGE">
+    <field name="Preference" type="UInt16" />
+    <field name="Mailserver" type="Domain" />
+  </rr>
+</dns>

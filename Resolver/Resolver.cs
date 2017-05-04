@@ -32,6 +32,20 @@ namespace DNSResolver
         public IEnumerable<DNSRecord> aliases;
         public IEnumerable<DNSRecord> referrals;
         public IEnumerable<DNSRecord> referral_additional;
+
+		public override bool Equals(object other)
+		{
+			if (!(other is ResolverResult))
+			{
+				return false;
+			}
+
+			var other_result = (ResolverResult)other;
+			return answers.SequenceEqual(other_result.answers) &&
+						  aliases.SequenceEqual(other_result.aliases) &&
+						  referrals.SequenceEqual(other_result.referrals) &&
+						  referral_additional.SequenceEqual(other_result.referral_additional);
+		}
     }
 
     public static class ResolverUtils
@@ -48,19 +62,11 @@ namespace DNSResolver
             var rng = new Random();
             var packet_id = (UInt16)rng.Next(0, (1 << 16) - 1);
 
-            var to_send = new DNSPacket();
-            to_send.Id = packet_id;
-            to_send.IsQuery = true;
-            to_send.QueryType = QueryType.STANDARD_QUERY;
-            to_send.IsAuthority = false;
-            to_send.WasTruncated = false;
-            to_send.RecursiveRequest = recursive;
-            to_send.RecursiveResponse = false;
-            to_send.ResponseType = ResponseType.NO_ERROR;
-            to_send.Questions = new DNSQuestion[1] { question };
-            to_send.Answers = new DNSRecord[0];
-            to_send.AuthoritativeAnswers = new DNSRecord[0];
-            to_send.AdditionalRecords = new DNSRecord[0];
+			var to_send = new DNSPacket(
+				packet_id, true, QueryType.STANDARD_QUERY,
+				false, false, recursive, false, ResponseType.NO_ERROR,
+				new DNSQuestion[] { question }, new DNSRecord[0], new DNSRecord[0], new DNSRecord[0]);
+			
             var send_bytes = to_send.ToBytes();
 
             using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
@@ -100,7 +106,7 @@ namespace DNSResolver
      */
     public interface IResolver
     {
-        ResolverResult Resolve(Domain domain, ResourceRecordType rtype, EndPoint[] servers);
+        ResolverResult Resolve(Domain domain, ResourceRecordType rtype, AddressClass addr_class, EndPoint[] servers);
     }
 
     /**
@@ -109,30 +115,28 @@ namespace DNSResolver
      */
     public class StubResolver : IResolver
     {
-        private static Logger logger = LogManager.GetCurrentClassLogger();
+		private static Logger logger = LogManager.GetCurrentClassLogger();
         private IDNSCache cache;
+		private Func<EndPoint, DNSQuestion, bool, DNSPacket> send_query;
 
-        public StubResolver(IDNSCache cache)
+		public StubResolver(IDNSCache cache, Func<EndPoint, DNSQuestion, bool, DNSPacket> send_query)
         {
             this.cache = cache;
+			this.send_query = send_query;
         }
 
         /**
          * Tries to resolve a question against the cache, and possibly several
          * servers. Throws a ResolverException if both methods fail.
          */
-        public DNSPacket QueryServers(Domain domain, ResourceRecordType record_kind, EndPoint[] servers)
+        public DNSPacket QueryServers(Domain domain, ResourceRecordType record_kind, AddressClass addr_class, EndPoint[] servers)
         {
-            var question = new DNSQuestion();
-            question.Name = domain;
-            question.AddressClass = AddressClass.INTERNET;
-            question.QueryType = record_kind;
-
+			var question = new DNSQuestion(domain, record_kind, addr_class);
             foreach (var server in servers)
             {
                 try
                 {
-                    var response = ResolverUtils.SendQuery(server, question, true);
+					var response = send_query(server, question, true);
                     if (response.ResponseType == ResponseType.NO_ERROR)
                     {
                         logger.Trace("Accepting response {0} from {1}", response, server);
@@ -152,12 +156,12 @@ namespace DNSResolver
          * Does the actual work of resolution, by talking to all the servers and
          * interpreting their answers.
          */
-        public ResolverResult Resolve(Domain domain, ResourceRecordType rtype, EndPoint[] servers)
+        public ResolverResult Resolve(Domain domain, ResourceRecordType rtype, AddressClass addr_class, EndPoint[] servers)
         {
-            var records = cache.Query(domain, AddressClass.INTERNET, rtype);
+            var records = cache.Query(domain, addr_class, rtype);
             if (records.Count == 0)
             {
-                var packet = QueryServers(domain, rtype, servers);
+                var packet = QueryServers(domain, rtype, addr_class, servers);
                 int found = 0;
 
                 foreach (var resource in packet.Answers)

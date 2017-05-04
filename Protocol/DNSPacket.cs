@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace DNSProtocol
@@ -20,6 +22,13 @@ namespace DNSProtocol
 
         // The address format of the query (e.g. INternet)
         public AddressClass AddressClass;
+
+		public DNSQuestion(Domain name, ResourceRecordType type, AddressClass address_class)
+		{
+			Name = name;
+			QueryType = type;
+			AddressClass = address_class;
+		}
 
         public override bool Equals(object other)
         {
@@ -70,16 +79,10 @@ namespace DNSProtocol
 
         public static DNSQuestion Unserialize(DNSInputStream stream)
         {
-            var query = new DNSQuestion();
-            query.Name = stream.ReadDomain();
-
-            var query_type = (ResourceRecordType)stream.ReadUInt16();
-            query.QueryType = query_type.Normalize();
-
+            var name = stream.ReadDomain();
+			var query_type = (ResourceRecordType)stream.ReadUInt16();
             var address_class = (AddressClass)stream.ReadUInt16();
-            query.AddressClass = address_class.Normalize();
-
-            return query;
+			return new DNSQuestion(name, query_type.Normalize(), address_class.Normalize());
         }
     }
 
@@ -105,7 +108,7 @@ namespace DNSProtocol
         public bool IsAuthority;
 
         // Whether or not the reqponse was truncated
-        public bool WasTruncated;
+        public bool IsTruncated;
 
         // Whether the name server *should* act recursively or not
         // (Set by the client to direct the server)
@@ -130,6 +133,25 @@ namespace DNSProtocol
         // The responses that make up the additional records section
         public DNSRecord[] AdditionalRecords;
 
+		public DNSPacket(UInt16 id, bool is_query, QueryType qtype, bool is_authority, bool is_truncated,
+						 bool recurisve_request, bool recursive_response, ResponseType rtype,
+						 IEnumerable<DNSQuestion> questions, IEnumerable<DNSRecord> answers,
+						 IEnumerable<DNSRecord> authority, IEnumerable<DNSRecord> additional)
+		{
+			Id = id;
+			IsQuery = is_query;
+			QueryType = qtype;
+			IsAuthority = is_authority;
+			IsTruncated = is_truncated;
+			RecursiveRequest = recurisve_request;
+			RecursiveResponse = recursive_response;
+			ResponseType = rtype;
+			Questions = questions.ToArray();
+			Answers = answers.ToArray();
+			AuthoritativeAnswers = authority.ToArray();
+			AdditionalRecords = additional.ToArray();
+		}
+
         public override string ToString()
         {
             var buffer = new StringBuilder();
@@ -138,7 +160,7 @@ namespace DNSProtocol
             buffer.Append("  IsQuery=" + IsQuery + "\n");
             buffer.Append("  QueryType=" + QueryType + "\n");
             buffer.Append("  IsAuthority=" + IsAuthority + "\n");
-            buffer.Append("  WasTruncated=" + WasTruncated + "\n");
+            buffer.Append("  WasTruncated=" + IsTruncated + "\n");
             buffer.Append("  RecursiveRequest=" + RecursiveRequest + "\n");
             buffer.Append("  RecursiveResponse=" + RecursiveResponse + "\n");
             buffer.Append("  ResponseType=" + ResponseType + "\n");
@@ -196,7 +218,7 @@ namespace DNSProtocol
                 hash = hash * 29 + (IsQuery ? 1 : 0);
                 hash = hash * 29 + (int)QueryType;
                 hash = hash * 29 + (IsAuthority ? 1 : 0);
-                hash = hash * 29 + (WasTruncated ? 1 : 0);
+                hash = hash * 29 + (IsTruncated ? 1 : 0);
                 hash = hash * 29 + (RecursiveRequest ? 1 : 0);
                 hash = hash * 29 + (RecursiveResponse ? 1 : 0);
                 hash = hash * 29 + (int)ResponseType;
@@ -285,7 +307,7 @@ namespace DNSProtocol
             this.IsQuery == other.IsQuery &&
             this.QueryType == other.QueryType &&
             this.IsAuthority == other.IsAuthority &&
-            this.WasTruncated == other.WasTruncated &&
+            this.IsTruncated == other.IsTruncated &&
             this.RecursiveRequest == other.RecursiveRequest &&
             this.RecursiveResponse == other.RecursiveResponse &&
             this.ResponseType == other.ResponseType;
@@ -299,7 +321,7 @@ namespace DNSProtocol
                 .Add(new Field(1, IsQuery ? (byte)0 : (byte)1))
                 .Add(new Field(4, (byte)QueryType))
                 .Add(new Field(1, IsAuthority ? (byte)1 : (byte)0))
-                .Add(new Field(1, WasTruncated ? (byte)1 : (byte)0))
+                .Add(new Field(1, IsTruncated ? (byte)1 : (byte)0))
                 .Add(new Field(1, RecursiveRequest ? (byte)1 : (byte)0));
             stream.WriteByte(fields.Pack());
 
@@ -337,94 +359,87 @@ namespace DNSProtocol
 
         public static DNSPacket Unserialize(DNSInputStream stream)
         {
-            var packet = new DNSPacket();
-            packet.Id = stream.ReadUInt16();
+            var id = stream.ReadUInt16();
 
-            var is_query = new Field(1);
-            var query_type = new Field(4);
-            var is_authority = new Field(1);
-            var was_truncated = new Field(1);
-            var recursive_request = new Field(1);
+            var is_query_bit = new Field(1);
+            var query_type_flag = new Field(4);
+            var is_authority_bit = new Field(1);
+            var is_truncated_bit= new Field(1);
+            var recursive_request_bit = new Field(1);
             new FieldGroup()
-                .Add(is_query)
-                .Add(query_type)
-                .Add(is_authority)
-                .Add(was_truncated)
-                .Add(recursive_request)
+                .Add(is_query_bit)
+                .Add(query_type_flag)
+                .Add(is_authority_bit)
+                .Add(is_truncated_bit)
+                .Add(recursive_request_bit)
                 .Unpack(stream.ReadByte());
 
-            packet.IsQuery = is_query.Value == 0;
-            packet.IsAuthority = is_authority.Value == 1;
-            packet.WasTruncated = was_truncated.Value == 1;
-            packet.RecursiveRequest = recursive_request.Value == 1;
+            var is_query = is_query_bit.Value == 0;
+            var query_type = (QueryType)query_type_flag.Value;
+            var is_authority = is_authority_bit.Value == 1;
+            var is_truncated = is_truncated_bit.Value == 1;
+            var recursive_request = recursive_request_bit.Value == 1;
 
-            packet.QueryType = (QueryType)query_type.Value;
-            packet.QueryType = packet.QueryType.Normalize();
-
-            var recursion_availble = new Field(1);
+            var recursion_availble_bit = new Field(1);
             var zeroes = new Field(3);
-            var response_type = new Field(4);
+            var response_type_flag = new Field(4);
             new FieldGroup()
-                .Add(recursion_availble)
+                .Add(recursion_availble_bit)
                 .Add(zeroes)
-                .Add(response_type)
+                .Add(response_type_flag)
                 .Unpack(stream.ReadByte());
 
-            packet.RecursiveResponse = recursion_availble.Value == 1;
-
-            packet.ResponseType = (ResponseType)response_type.Value;
-            packet.ResponseType = packet.ResponseType.Normalize();
+			var recursive_response = recursion_availble_bit.Value == 1;
+            var response_type = (ResponseType)response_type_flag.Value;
 
             var question_count = stream.ReadUInt16();
             var answer_count = stream.ReadUInt16();
             var authority_count = stream.ReadUInt16();
             var additional_count = stream.ReadUInt16();
 
-            packet.Questions = new DNSQuestion[question_count];
+            var questions = new DNSQuestion[question_count];
             for (int i = 0; i < question_count; i++)
             {
-                packet.Questions[i] = DNSQuestion.Unserialize(stream);
-
-                if (packet.Questions[i] == null)
+                questions[i] = DNSQuestion.Unserialize(stream);
+                if (questions[i] == null)
                 {
                     throw new InvalidDataException("null Question " + i);
                 }
             }
 
-            packet.Answers = new DNSRecord[answer_count];
+            var answers = new DNSRecord[answer_count];
             for (int i = 0; i < answer_count; i++)
             {
-                packet.Answers[i] = DNSRecord.Unserialize(stream);
-
-                if (packet.Answers[i] == null)
+                answers[i] = DNSRecord.Unserialize(stream);
+                if (answers[i] == null)
                 {
                     throw new InvalidDataException("null Answer " + i);
                 }
             }
 
-            packet.AuthoritativeAnswers = new DNSRecord[authority_count];
+            var authority = new DNSRecord[authority_count];
             for (int i = 0; i < authority_count; i++)
             {
-                packet.AuthoritativeAnswers[i] = DNSRecord.Unserialize(stream);
-
-                if (packet.AuthoritativeAnswers[i] == null)
+                authority[i] = DNSRecord.Unserialize(stream);
+                if (authority[i] == null)
                 {
                     throw new InvalidDataException("null Authority " + i);
                 }
             }
 
-            packet.AdditionalRecords = new DNSRecord[additional_count];
+            var additional = new DNSRecord[additional_count];
             for (int i = 0; i < additional_count; i++)
             {
-                packet.AdditionalRecords[i] = DNSRecord.Unserialize(stream);
-
-                if (packet.AdditionalRecords[i] == null)
+                additional[i] = DNSRecord.Unserialize(stream);
+                if (additional[i] == null)
                 {
                     throw new InvalidDataException("null Additional " + i);
                 }
             }
 
-            return packet;
+			return new DNSPacket(id, is_query, query_type.Normalize(), is_authority, is_truncated, 
+			                     recursive_request, recursive_response, response_type.Normalize(),
+			                     questions, answers, authority, additional);
         }
 
         /**

@@ -25,11 +25,11 @@ namespace DNSResolver
             IResolver resolver;
             if (args.Length == 0 || args[0] == "debug")
             {
-                resolver = new StubResolver(cache);
+				resolver = new StubResolver(cache, ResolverUtils.SendQuery);
             }
             else
             {
-                Console.WriteLine("Resolver must be either 'full' or 'debug'");
+                Console.WriteLine("Resolver must be 'debug'");
                 return;
             }
 
@@ -37,7 +37,7 @@ namespace DNSResolver
             var domain = Console.ReadLine().Trim();
             try
             {
-                var results = resolver.Resolve(new Domain(domain), ResourceRecordType.HOST_ADDRESS, endpoints);
+				var results = resolver.Resolve(new Domain(domain), ResourceRecordType.HOST_ADDRESS, AddressClass.INTERNET, endpoints);
                 Console.WriteLine("=== Success ===");
                 Console.WriteLine("*** Answers");
                 foreach (var record in results.answers)

@@ -20,7 +20,7 @@ namespace DNSServer
     {
         private static Logger logger = LogManager.GetCurrentClassLogger();
 
-        private Dictionary<Tuple<Domain, ResourceRecordType>, HashSet<DNSRecord>> zone_records;
+		private Dictionary<Tuple<Domain, ResourceRecordType, AddressClass>, HashSet<DNSRecord>> zone_records;
 
         // We want to make sure that we can efficiently check and see if a domain is a part of our zone
         public DNSRecord StartOfAuthority;
@@ -29,7 +29,7 @@ namespace DNSServer
 
         public DNSZone(DNSRecord start_of_authority, EndPoint[] relays)
         {
-            zone_records = new Dictionary<Tuple<Domain, ResourceRecordType>, HashSet<DNSRecord>>();
+			zone_records = new Dictionary<Tuple<Domain, ResourceRecordType, AddressClass>, HashSet<DNSRecord>>();
             StartOfAuthority = start_of_authority;
             Relays = relays;
             sub_zones = new HashSet<Domain>();
@@ -40,7 +40,7 @@ namespace DNSServer
          */
         public void Add(DNSRecord record)
         {
-            var key = Tuple.Create(record.Name, record.Resource.Type);
+			var key = Tuple.Create(record.Name, record.Resource.Type, record.AddressClass);
             if (!zone_records.ContainsKey(key))
             {
                 zone_records[key] = new HashSet<DNSRecord>();
@@ -64,9 +64,9 @@ namespace DNSServer
         /**
          * Gets all records with the given domain and record type in the zone.
          */
-        public IEnumerable<DNSRecord> Query(Domain domain, ResourceRecordType rtype)
+		public IEnumerable<DNSRecord> Query(Domain domain, ResourceRecordType rtype, AddressClass addr_class)
         {
-            var key = Tuple.Create(domain, rtype);
+            var key = Tuple.Create(domain, rtype, addr_class);
             HashSet<DNSRecord> records;
             zone_records.TryGetValue(key, out records);
 
@@ -161,18 +161,22 @@ namespace DNSServer
                         throw new InvalidDataException("Resource records must have 'name', 'class' and 'ttl' attributes");
                     }
 
-                    var record = new DNSRecord();
-                    record.Name = new Domain(entry.Attributes["name"].Value);
-                    record.AddressClass = AddressClass.INTERNET;
+                    var record_name = new Domain(entry.Attributes["name"].Value);
 
-                    if (entry.Attributes["class"].Value != "IN")
-                    {
-                        throw new InvalidDataException("Only address class 'IN' is supported");
+					AddressClass record_class;
+					switch (entry.Attributes["class"].Value)
+					{
+						case "IN":
+							record_class = AddressClass.INTERNET;
+							break;
+						default:
+	                        throw new InvalidDataException("Only address class 'IN' is supported");
                     }
 
+					UInt32 record_ttl = 0;
                     try
                     {
-                        record.TimeToLive = UInt16.Parse(entry.Attributes["ttl"].Value);
+                        record_ttl = UInt16.Parse(entry.Attributes["ttl"].Value);
                     }
                     catch (InvalidDataException err)
                     {
@@ -190,8 +194,7 @@ namespace DNSServer
 
                             try
                             {
-                                resource = new AResource();
-                                ((AResource)resource).Address = IPAddress.Parse(entry.Attributes["address"].Value);
+								resource = new AResource(IPAddress.Parse(entry.Attributes["address"].Value));
                             }
                             catch (FormatException err)
                             {
@@ -207,8 +210,7 @@ namespace DNSServer
                                 throw new InvalidDataException("NS record must have a nameserver");
                             }
 
-                            resource = new NSResource();
-                            ((NSResource)resource).Nameserver = new Domain(entry.Attributes["nameserver"].Value);
+							resource = new NSResource(new Domain(entry.Attributes["nameserver"].Value));
 
                             logger.Trace("NS record: nameserver={0}", ((NSResource)resource).Nameserver);
                             break;
@@ -219,8 +221,7 @@ namespace DNSServer
                                 throw new InvalidDataException("CNAME record must have an alias");
                             }
 
-                            resource = new CNAMEResource();
-                            ((CNAMEResource)resource).Alias = new Domain(entry.Attributes["alias"].Value);
+							resource = new CNAMEResource(new Domain(entry.Attributes["alias"].Value));
 
                             logger.Trace("CNAME record: alias={0}", ((CNAMEResource)resource).Alias);
                             break;
@@ -232,17 +233,19 @@ namespace DNSServer
                                 throw new InvalidDataException("MX record must have priority and mailserver");
                             }
 
-                            resource = new MXResource();
-                            ((MXResource)resource).Mailserver = new Domain(entry.Attributes["mailserver"].Value);
+                            var mailserver = new Domain(entry.Attributes["mailserver"].Value);
 
+							UInt16 preference = 0;
                             try
                             {
-                                ((MXResource)resource).Preference = UInt16.Parse(entry.Attributes["priority"].Value);
+								preference = UInt16.Parse(entry.Attributes["priority"].Value);
                             }
                             catch (FormatException err)
                             {
                                 throw new InvalidDataException(entry.Attributes["priority"].Value + " is not a valid priority value");
                             }
+
+							resource = new MXResource(preference, mailserver);
 
                             logger.Trace("MX record: priority={0} mailserver={1}",
                                 ((MXResource)resource).Preference,
@@ -261,54 +264,60 @@ namespace DNSServer
                                 throw new InvalidDataException("SOA record missing one of: primary-ns, hostmaster, serial, refresh, retry, expire and min-ttl");
                             }
 
-                            resource = new SOAResource();
-                            ((SOAResource)resource).PrimaryNameServer = new Domain(entry.Attributes["primary-ns"].Value);
-                            ((SOAResource)resource).Hostmaster = new Domain(entry.Attributes["hostmaster"].Value);
+							var primary_ns = new Domain(entry.Attributes["primary-ns"].Value);
+							var hostmaster = new Domain(entry.Attributes["hostmaster"].Value);
 
+							UInt32 serial = 0;
                             try
                             {
-                                ((SOAResource)resource).Serial = UInt16.Parse(entry.Attributes["serial"].Value);
+                                serial = UInt16.Parse(entry.Attributes["serial"].Value);
                             }
                             catch (FormatException err)
                             {
                                 throw new InvalidDataException(entry.Attributes["serial"].Value + " is not a valid serial number");
                             }
 
+							UInt32 refresh = 0;
                             try
-                            {
-                                ((SOAResource)resource).RefreshSeconds = UInt16.Parse(entry.Attributes["refresh"].Value);
+							{
+                                refresh = UInt16.Parse(entry.Attributes["refresh"].Value);
                             }
                             catch (FormatException err)
                             {
                                 throw new InvalidDataException(entry.Attributes["refresh"].Value + " is not a valid refresh value");
                             }
 
+							UInt32 retry = 0;
                             try
                             {
-                                ((SOAResource)resource).RetrySeconds = UInt16.Parse(entry.Attributes["retry"].Value);
+                                retry = UInt16.Parse(entry.Attributes["retry"].Value);
                             }
                             catch (FormatException err)
                             {
                                 throw new InvalidDataException(entry.Attributes["retry"].Value + " is not a valid retry value");
                             }
 
+							UInt32 expire = 0;
                             try
                             {
-                                ((SOAResource)resource).ExpireSeconds = UInt16.Parse(entry.Attributes["expire"].Value);
+                                expire = UInt16.Parse(entry.Attributes["expire"].Value);
                             }
                             catch (FormatException err)
                             {
                                 throw new InvalidDataException(entry.Attributes["expire"].Value + " is not a valid expire value");
                             }
 
+							UInt32 minttl = 0;
                             try
                             {
-                                ((SOAResource)resource).MinimumTTL = UInt16.Parse(entry.Attributes["min-ttl"].Value);
+                                minttl = UInt16.Parse(entry.Attributes["min-ttl"].Value);
                             }
                             catch (FormatException err)
                             {
                                 throw new InvalidDataException(entry.Attributes["min-ttl"].Value + " is not a valid expire value");
                             }
+
+							resource = new SOAResource(primary_ns, hostmaster, serial, refresh, retry, expire, minttl);
 
                             logger.Trace("SOA record: primary-ns={0} hostmaster={1} serial={2} refresh={3} retry={4} expire={5} min-ttl={6}",
                                 ((SOAResource)resource).PrimaryNameServer,
@@ -322,8 +331,7 @@ namespace DNSServer
                             break;
                     }
 
-                    record.Resource = resource;
-
+					var record = new DNSRecord(record_name, record_class, record_ttl, resource);
                     if (record.Resource.Type == ResourceRecordType.START_OF_AUTHORITY)
                     {
                         if (start_of_authority == null)

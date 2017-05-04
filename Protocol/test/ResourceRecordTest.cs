@@ -271,8 +271,7 @@ namespace DNSProtocol
         public void testSerializeAResource()
         {
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
-            var record = new AResource();
-            record.Address = new IPAddress(new byte[] { 192, 168, 0, 1 });
+			var record = new AResource(new IPAddress(new byte[] { 192, 168, 0, 1 }));
             record.Serialize(out_info.Item2);
             var record_bytes = out_info.Item1.ToArray();
 
@@ -286,8 +285,7 @@ namespace DNSProtocol
             var stream = DNSInput(new byte[] { 192, 168, 0, 1 });
             var resource = AResource.Unserialize(stream, 4);
 
-            var expected = new AResource();
-            expected.Address = new IPAddress(new byte[] { 192, 168, 0, 1 });
+			var expected = new AResource(new IPAddress(new byte[] { 192, 168, 0, 1 }));
             Assert.That(resource, Is.EqualTo(expected));
         }
 
@@ -295,13 +293,12 @@ namespace DNSProtocol
         public void testSerializeCompleteAResource()
         {
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
-            var record = new DNSRecord();
-            var record_info = new AResource();
-            record.Name = new Domain("example.com");
-            record.AddressClass = AddressClass.INTERNET;
-            record.TimeToLive = 42;
-            record.Resource = record_info;
-            record_info.Address = new IPAddress(new byte[] { 192, 168, 0, 1 });
+			var record = new DNSRecord(
+				new Domain("example.com"),
+				AddressClass.INTERNET,
+				42,
+				new AResource(new IPAddress(new byte[] { 192, 168, 0, 1 })));
+			
             record.Serialize(out_info.Item2);
             var record_bytes = out_info.Item1.ToArray();
 
@@ -347,8 +344,7 @@ namespace DNSProtocol
         public void testSerializeNSRecord()
         {
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
-            var record = new NSResource();
-            record.Nameserver = new Domain("dns.example.com");
+			var record = new NSResource(new Domain("dns.example.com"));
             record.Serialize(out_info.Item2);
             var record_bytes = out_info.Item1.ToArray();
 
@@ -382,8 +378,7 @@ namespace DNSProtocol
             var stream = DNSInput(new byte[] { 3, 100, 110, 115, 7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0 });
             var resource = NSResource.Unserialize(stream, 4);
 
-            var expected = new NSResource();
-            expected.Nameserver = new Domain("dns.example.com");
+			var expected = new NSResource(new Domain("dns.example.com"));
             Assert.That(resource, Is.EqualTo(expected));
         }
 
@@ -391,13 +386,12 @@ namespace DNSProtocol
         public void testSerializeCompleteNSRecord()
         {
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
-            var record = new DNSRecord();
-            var record_info = new NSResource();
-            record.Name = new Domain("example.com");
-            record.AddressClass = AddressClass.INTERNET;
-            record.TimeToLive = 42;
-            record.Resource = record_info;
-            record_info.Nameserver = new Domain("dns.example.com");
+			var record = new DNSRecord(
+				new Domain("example.com"),
+				AddressClass.INTERNET,
+				42,
+				new NSResource(new Domain("dns.example.com")));
+			
             record.Serialize(out_info.Item2);
             var record_bytes = out_info.Item1.ToArray();
 
@@ -445,15 +439,20 @@ namespace DNSProtocol
         [Test]
         public void testSerializeSOAResource()
         {
+			UInt32 one_hour = 60 * 60;
+			UInt32 one_day = one_hour * 24;
+			UInt32 one_week = one_day * 7;
+
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
-            var record = new SOAResource();
-            record.PrimaryNameServer = new Domain("dns.example.com");
-            record.Hostmaster = new Domain("hostmaster.example.com");
-            record.Serial = 42;
-            record.RefreshSeconds = 60 * 60 * 24 * 7; // 1 week of seconds
-            record.RetrySeconds = 60 * 60; // 1 hour of seconds
-            record.ExpireSeconds = 60 * 60 * 24 * 7; // 1 week of seconds
-            record.MinimumTTL = 60 * 60 * 24; // 1 day of seconds
+			var record = new SOAResource(
+				new Domain("dns.example.com"),
+				new Domain("hostmaster.example.com"),
+				42,
+				one_week,
+				one_hour,
+				one_week,
+				one_day);
+
             record.Serialize(out_info.Item2);
             var record_bytes = out_info.Item1.ToArray();
 
@@ -539,34 +538,43 @@ namespace DNSProtocol
                 });
             var resource = SOAResource.Unserialize(stream, 4);
 
-            var expected = new SOAResource();
-            expected.PrimaryNameServer = new Domain("dns.example.com");
-            expected.Hostmaster = new Domain("hostmaster.example.com");
-            expected.Serial = 42;
-            expected.RefreshSeconds = 60 * 60 * 24 * 7; // 1 week of seconds
-            expected.RetrySeconds = 60 * 60; // 1 hour of seconds
-            expected.ExpireSeconds = 60 * 60 * 24 * 7; // 1 week of seconds
-            expected.MinimumTTL = 60 * 60 * 24; // 1 day of seconds
+			UInt32 one_hour = 60 * 60;
+			UInt32 one_day = one_hour * 24;
+			UInt32 one_week = one_day * 7;
+
+			var expected = new SOAResource(
+				new Domain("dns.example.com"),
+				new Domain("hostmaster.example.com"),
+				42,
+				one_week,
+				one_hour,
+				one_week,
+				one_day);
+
             Assert.That(resource, Is.EqualTo(expected));
         }
 
         [Test]
         public void testSerializeCompleteSOAResource()
         {
+			UInt32 one_hour = 60 * 60;
+			UInt32 one_day = one_hour * 24;
+			UInt32 one_week = one_day * 7;
+
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
-            var record = new DNSRecord();
-            var record_info = new SOAResource();
-            record.Name = new Domain("example.com");
-            record.AddressClass = AddressClass.INTERNET;
-            record.TimeToLive = 42;
-            record.Resource = record_info;
-            record_info.PrimaryNameServer = new Domain("dns.example.com");
-            record_info.Hostmaster = new Domain("hostmaster.example.com");
-            record_info.Serial = 42;
-            record_info.RefreshSeconds = 60 * 60 * 24 * 7; // 1 week of seconds
-            record_info.RetrySeconds = 60 * 60; // 1 hour of seconds
-            record_info.ExpireSeconds = 60 * 60 * 24 * 7; // 1 week of seconds
-            record_info.MinimumTTL = 60 * 60 * 24;
+			var record = new DNSRecord(
+				new Domain("example.com"),
+				AddressClass.INTERNET,
+				42,
+				new SOAResource(
+					new Domain("dns.example.com"),
+					new Domain("hostmaster.example.com"),
+					42,
+					one_week,
+					one_hour,
+					one_week,
+					one_day));
+			
             record.Serialize(out_info.Item2);
             var record_bytes = out_info.Item1.ToArray();
 
@@ -654,8 +662,7 @@ namespace DNSProtocol
         public void testSerializeCNAMERecord()
         {
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
-            var record = new CNAMEResource();
-            record.Alias = new Domain("www.example.com");
+			var record = new CNAMEResource(new Domain("www.example.com"));
             record.Serialize(out_info.Item2);
             var record_bytes = out_info.Item1.ToArray();
 
@@ -689,8 +696,7 @@ namespace DNSProtocol
             var stream = DNSInput(new byte[] { 3, 119, 119, 119, 7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0 });
             var resource = CNAMEResource.Unserialize(stream, 4);
 
-            var expected = new CNAMEResource();
-            expected.Alias = new Domain("www.example.com");
+			var expected = new CNAMEResource(new Domain("www.example.com"));
             Assert.That(resource, Is.EqualTo(expected));
         }
 
@@ -698,13 +704,12 @@ namespace DNSProtocol
         public void testSerializeCompleteCNAMERecord()
         {
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
-            var record = new DNSRecord();
-            var record_info = new CNAMEResource();
-            record.Name = new Domain("example.com");
-            record.AddressClass = AddressClass.INTERNET;
-            record.TimeToLive = 42;
-            record.Resource = record_info;
-            record_info.Alias = new Domain("www.example.com");
+			var record = new DNSRecord(
+				new Domain("example.com"),
+				AddressClass.INTERNET,
+				42,
+				new CNAMEResource(new Domain("www.example.com")));
+			
             record.Serialize(out_info.Item2);
             var record_bytes = out_info.Item1.ToArray();
 
@@ -753,9 +758,7 @@ namespace DNSProtocol
         public void testSerializeMXRecord()
         {
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
-            var record = new MXResource();
-            record.Preference = 1000;
-            record.Mailserver = new Domain("mail.example.com");
+			var record = new MXResource(1000, new Domain("mail.example.com"));
             record.Serialize(out_info.Item2);
             var record_bytes = out_info.Item1.ToArray();
 
@@ -793,9 +796,7 @@ namespace DNSProtocol
             var stream = DNSInput(new byte[] { 3, 232, 4, 109, 97, 105, 108, 7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0 });
             var resource = MXResource.Unserialize(stream, 4);
 
-            var expected = new MXResource();
-            expected.Preference = 1000;
-            expected.Mailserver = new Domain("mail.example.com");
+			var expected = new MXResource(1000, new Domain("mail.example.com"));
             Assert.That(resource, Is.EqualTo(expected));
         }
 
@@ -803,14 +804,12 @@ namespace DNSProtocol
         public void testSerializeCompleteMXRecord()
         {
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
-            var record = new DNSRecord();
-            var record_info = new MXResource();
-            record.Name = new Domain("example.com");
-            record.AddressClass = AddressClass.INTERNET;
-            record.TimeToLive = 42;
-            record.Resource = record_info;
-            record_info.Preference = 1000;
-            record_info.Mailserver = new Domain("mail.example.com");
+			var record = new DNSRecord(
+				new Domain("example.com"),
+				AddressClass.INTERNET,
+				42,
+				new MXResource(1000, new Domain("mail.example.com")));
+			
             record.Serialize(out_info.Item2);
             var record_bytes = out_info.Item1.ToArray();
 

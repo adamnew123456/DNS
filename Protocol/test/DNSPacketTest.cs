@@ -28,10 +28,11 @@ namespace DNSProtocol
         {
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
 
-            var question = new DNSQuestion();
-            question.Name = new Domain("example.com");
-            question.QueryType = ResourceRecordType.HOST_ADDRESS;
-            question.AddressClass = AddressClass.INTERNET;
+			var question = new DNSQuestion(
+				new Domain("example.com"),  
+				ResourceRecordType.HOST_ADDRESS,  
+				AddressClass.INTERNET);
+			
             question.Serialize(out_info.Item2);
             var question_bytes = out_info.Item1.ToArray();
 
@@ -75,10 +76,10 @@ namespace DNSProtocol
 
             var question = DNSQuestion.Unserialize(stream);
 
-            var expected = new DNSQuestion();
-            expected.Name = new Domain("example.com");
-            expected.QueryType = ResourceRecordType.HOST_ADDRESS;
-            expected.AddressClass = AddressClass.INTERNET;
+			var expected = new DNSQuestion(
+				new Domain("example.com"), 
+				ResourceRecordType.HOST_ADDRESS, 
+				AddressClass.INTERNET);
 
             Assert.That(question, Is.EqualTo(expected));
         }
@@ -105,32 +106,21 @@ namespace DNSProtocol
         [Test]
         public void testSerializeDNSPacket()
         {
-            var question = new DNSQuestion();
-            question.Name = new Domain("example.com");
-            question.QueryType = ResourceRecordType.HOST_ADDRESS;
-            question.AddressClass = AddressClass.INTERNET;
+			var question = new DNSQuestion(
+				new Domain("example.com"), 
+				ResourceRecordType.HOST_ADDRESS, 
+				AddressClass.INTERNET);
 
-            var record = new DNSRecord();
-            var record_info = new AResource();
-            record.Name = new Domain("example.com");
-            record.AddressClass = AddressClass.INTERNET;
-            record.TimeToLive = 42;
-            record.Resource = record_info;
-            record_info.Address = new IPAddress(new byte[] { 192, 168, 0, 1 });
+			var answer = new DNSRecord(
+				new Domain("example.com"),
+				AddressClass.INTERNET,
+				42,
+				new AResource(new IPAddress(new byte[] { 192, 168, 0, 1 })));
 
-            var packet = new DNSPacket();
-            packet.Id = 42;
-            packet.IsQuery = true;
-            packet.QueryType = QueryType.STANDARD_QUERY;
-            packet.IsAuthority = true;
-            packet.WasTruncated = false;
-            packet.RecursiveRequest = false;
-            packet.RecursiveResponse = true;
-            packet.ResponseType = ResponseType.NO_ERROR;
-            packet.Questions = new DNSQuestion[] { question };
-            packet.Answers = new DNSRecord[] { record };
-            packet.AuthoritativeAnswers = new DNSRecord[] { };
-            packet.AdditionalRecords = new DNSRecord[] { };
+			var packet = new DNSPacket(
+				42,
+				true, QueryType.STANDARD_QUERY, true, false, false, true, ResponseType.NO_ERROR,
+				new DNSQuestion[] { question }, new DNSRecord[] { answer }, new DNSRecord[0], new DNSRecord[0]);
 
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
             packet.Serialize(out_info.Item2);
@@ -208,15 +198,15 @@ namespace DNSProtocol
         }
 
 
-        [Test]
-        public void testUnserializeDNSPacket()
-        {
+		[Test]
+		public void testUnserializeDNSPacket()
+		{
 
-            var stream = DNSInput(new byte[]
-                {
+			var stream = DNSInput(new byte[]
+				{
                     // Big-endian 42
                     0,
-                    42,
+					42,
                     // This is the query/resonse bit, the query type, the authority
                     // bit, the truncation bit, and the recursion desired bit
                     4,
@@ -225,88 +215,77 @@ namespace DNSProtocol
                     128,
                     // Big-endian 1
                     0,
-                    1,
+					1,
                     // Big-endian 1
                     0,
-                    1,
+					1,
                     // Big-endian 0
                     0,
-                    0,
+					0,
                     // Big-endian 0
                     0,
-                    0,
+					0,
                     // The question - A record for example.com
                     7, // Length of example
                     101,
-                    120,
-                    97,
-                    109,
-                    112,
-                    108,
-                    101,
-                    3, // Length of com
+					120,
+					97,
+					109,
+					112,
+					108,
+					101,
+					3, // Length of com
                     99,
-                    111,
-                    109,
-                    0,
+					111,
+					109,
+					0,
                     // A record has code 1
                     0,
-                    1,
+					1,
                     // INTERNET has class 1
                     0,
-                    1,
+					1,
                     // The answer - the A record for example.com
                     // Pointer to byte 96 - "example.com"
                     192,
-                    12,
+					12,
                     // A record has code 1
                     0,
-                    1,
+					1,
                     // INTERNET has class 1
                     0,
-                    1,
+					1,
                     // Big-endian representation of 42
                     0,
-                    0,
-                    0,
-                    42,
+					0,
+					0,
+					42,
                     // Record is 4 bytes long
                     0,
-                    4,
+					4,
                     // The record itself
                     192,
-                    168,
-                    0,
-                    1
-                });
-            var packet = DNSPacket.Unserialize(stream);
+					168,
+					0,
+					1
+				});
+			var packet = DNSPacket.Unserialize(stream);
 
-            var question = new DNSQuestion();
-            question.Name = new Domain("example.com");
-            question.QueryType = ResourceRecordType.HOST_ADDRESS;
-            question.AddressClass = AddressClass.INTERNET;
+			var question = new DNSQuestion(
+				new Domain("example.com"),
+				ResourceRecordType.HOST_ADDRESS,
+				AddressClass.INTERNET);
 
-            var record = new DNSRecord();
-            var record_info = new AResource();
-            record.Name = new Domain("example.com");
-            record.AddressClass = AddressClass.INTERNET;
-            record.TimeToLive = 42;
-            record.Resource = record_info;
-            record_info.Address = new IPAddress(new byte[] { 192, 168, 0, 1 });
+			var answer = new DNSRecord(
+				new Domain("example.com"),
+				AddressClass.INTERNET,
+				42,
+				new AResource(new IPAddress(new byte[] { 192, 168, 0, 1 })));
 
-            var expected = new DNSPacket();
-            expected.Id = 42;
-            expected.IsQuery = true;
-            expected.QueryType = QueryType.STANDARD_QUERY;
-            expected.IsAuthority = true;
-            expected.WasTruncated = false;
-            expected.RecursiveRequest = false;
-            expected.RecursiveResponse = true;
-            expected.ResponseType = ResponseType.NO_ERROR;
-            expected.Questions = new DNSQuestion[] { question };
-            expected.Answers = new DNSRecord[] { record };
-            expected.AuthoritativeAnswers = new DNSRecord[] { };
-            expected.AdditionalRecords = new DNSRecord[] { };
+			var expected = new DNSPacket(
+				42,
+				true, QueryType.STANDARD_QUERY, true, false, false, true, ResponseType.NO_ERROR,
+				new DNSQuestion[] { question }, new DNSRecord[] { answer }, new DNSRecord[0], new DNSRecord[0]);
 
             Assert.That(packet, Is.EqualTo(expected));
         }

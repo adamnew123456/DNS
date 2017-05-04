@@ -46,9 +46,10 @@
   <ItemGroup>
     <Compile Include="Resolver.cs" />
     <Compile Include="Cache.cs" />
-    <Compile Include="test\PriorityQueue.cs" />
-    <Compile Include="test\Cache.cs" />
+    <Compile Include="test\PriorityQueueTest.cs" />
+    <Compile Include="test\CacheTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="test\StubResolverTest.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

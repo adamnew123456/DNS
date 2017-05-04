@@ -28,6 +28,13 @@
     <ConsolePause>false</ConsolePause>
   </PropertyGroup>
   <ItemGroup>
+    <None Include="ResourceRecordImpl.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>ResourceRecordImpl.cs</LastGenOutput>
+    </None>
+    <None Include="ProtocolDescription.xml" />
+  </ItemGroup>
+  <ItemGroup>
     <Reference Include="System" />
     <Reference Include="nunit.framework">
       <HintPath>..\packages\nunit.framework.dll</HintPath>
@@ -46,6 +53,9 @@
     <Compile Include="test\ResourceRecordTest.cs" />
     <Compile Include="test\DNSPacketTest.cs" />
     <Compile Include="test\DomainTest.cs" />
+    <Compile Include="ResourceRecordImpl.cs">
+      <DependentUpon>ResourceRecordImpl.tt</DependentUpon>
+    </Compile>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>
