@@ -24,7 +24,7 @@ namespace DNSProtocol
         }
 
         [Test]
-        public void testSerializeDNSQuestion()
+        public void TestSerializeDNSQuestion()
         {
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
 
@@ -63,7 +63,7 @@ namespace DNSProtocol
         }
 
         [Test]
-        public void testUnserializeDNSQuestion()
+        public void TestUnserializeDNSQuestion()
         {
             var stream = DNSInput(new byte[]
                 {
@@ -104,7 +104,7 @@ namespace DNSProtocol
         }
 
         [Test]
-        public void testSerializeDNSPacket()
+        public void TestSerializeDNSPacket()
         {
 			var question = new DNSQuestion(
 				new Domain("example.com"), 
@@ -199,7 +199,7 @@ namespace DNSProtocol
 
 
 		[Test]
-		public void testUnserializeDNSPacket()
+		public void TestUnserializeDNSPacket()
 		{
 
 			var stream = DNSInput(new byte[]

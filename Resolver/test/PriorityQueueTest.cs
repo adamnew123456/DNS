@@ -7,7 +7,7 @@ namespace DNSResolver
     public class PriorityQueueTest
     {
         [Test]
-        public void testEmptyQueueProperties()
+        public void TestEmptyQueueProperties()
         {
             var pq = new PriorityQueue<int>();
             Assert.That(pq.Count, Is.EqualTo(0));
@@ -15,7 +15,7 @@ namespace DNSResolver
         }
 
         [Test]
-        public void testEmptyQueueThrows()
+        public void TestEmptyQueueThrows()
         {
             var pq = new PriorityQueue<int>();
             Assert.Throws<InvalidOperationException>(() =>
@@ -33,7 +33,7 @@ namespace DNSResolver
         }
 
         [Test]
-        public void testPushQueueProperties()
+        public void TestPushQueueProperties()
         {
             var pq = new PriorityQueue<string>();
             pq.Push("Hello, World", 1);
@@ -45,7 +45,7 @@ namespace DNSResolver
         }
 
         [Test]
-        public void testPushQueuePop()
+        public void TestPushQueuePop()
         {
             var pq = new PriorityQueue<string>();
             pq.Push("Hello, World", 1);
@@ -53,7 +53,7 @@ namespace DNSResolver
         }
 
         [Test]
-        public void testPushQueuePopProperties()
+        public void TestPushQueuePopProperties()
         {
             var pq = new PriorityQueue<string>();
             pq.Push("Hello, World", 1);
@@ -66,7 +66,7 @@ namespace DNSResolver
         }
 
         [Test]
-        public void testSeveralPushPrioity()
+        public void TestSeveralPushPrioity()
         {
             var pq = new PriorityQueue<string>();
             pq.Push("Goodbye, World", 1);
@@ -77,7 +77,7 @@ namespace DNSResolver
         }
 
         [Test]
-        public void testSeveralPushProperties()
+        public void TestSeveralPushProperties()
         {
             var pq = new PriorityQueue<string>();
             pq.Push("Goodbye, World", 1);
@@ -90,7 +90,7 @@ namespace DNSResolver
         }
 
         [Test]
-        public void testReprioritize()
+        public void TestReprioritize()
             {
                 var pq = new PriorityQueue<string>();
                 pq.Push("Hello, World", 1);
@@ -102,7 +102,7 @@ namespace DNSResolver
             }
 
         [Test]
-        public void testReprioritizeProperties()
+        public void TestReprioritizeProperties()
             {
                 var pq = new PriorityQueue<string>();
                 pq.Push("Hello, World", 1);

@@ -13,7 +13,7 @@ namespace DNSProtocol
          * the first time they are referenced.
          */
         [Test]
-        public void testCompressionFirstUse()
+        public void TestCompressionFirstUse()
         {
             var compress = new CompressionOutputContext();
             var domain = new Domain("example.com");
@@ -44,7 +44,7 @@ namespace DNSProtocol
          * already seen.
          */
         [Test]
-        public void testCompressionMultipleUses()
+        public void TestCompressionMultipleUses()
         {
             var compress = new CompressionOutputContext();
             var domain_stream = new MemoryStream();
@@ -99,7 +99,7 @@ namespace DNSProtocol
          * it has already seen.
          */
         [Test]
-        public void testCompressionMultiplePartialUses()
+        public void TestCompressionMultiplePartialUses()
         {
             var compress = new CompressionOutputContext();
             var domain_stream = new MemoryStream();
@@ -152,7 +152,7 @@ namespace DNSProtocol
          * Ensure that the compression context outputs lower-case domain names.
          */
         [Test]
-        public void testCompressionLowerCase()
+        public void TestCompressionLowerCase()
         {
             var compress = new CompressionOutputContext();
             var domain = new Domain("EXAMPLE.COM");
@@ -184,7 +184,7 @@ namespace DNSProtocol
           * domain names.
          */
         [Test]
-        public void testUncompressionFirstUse()
+        public void TestUncompressionFirstUse()
         {
             var compress = new CompressionInputContext(new byte[]
                 {
@@ -215,7 +215,7 @@ namespace DNSProtocol
          * domain names.
          */
         [Test]
-        public void testUncompressionPointer()
+        public void TestUncompressionPointer()
         {
             var compress = new CompressionInputContext(new byte[]
                 {
@@ -268,7 +268,7 @@ namespace DNSProtocol
         }
 
         [Test]
-        public void testSerializeAResource()
+        public void TestSerializeAResource()
         {
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
 			var record = new AResource(new IPAddress(new byte[] { 192, 168, 0, 1 }));
@@ -280,7 +280,7 @@ namespace DNSProtocol
         }
 
         [Test]
-        public void testUnserializeAResource()
+        public void TestUnserializeAResource()
         {
             var stream = DNSInput(new byte[] { 192, 168, 0, 1 });
             var resource = AResource.Unserialize(stream, 4);
@@ -290,7 +290,7 @@ namespace DNSProtocol
         }
 
         [Test]
-        public void testSerializeCompleteAResource()
+        public void TestSerializeCompleteAResource()
         {
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
 			var record = new DNSRecord(
@@ -341,7 +341,7 @@ namespace DNSProtocol
         }
 
         [Test]
-        public void testSerializeNSRecord()
+        public void TestSerializeNSRecord()
         {
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
 			var record = new NSResource(new Domain("dns.example.com"));
@@ -373,7 +373,7 @@ namespace DNSProtocol
         }
 
         [Test]
-        public void testUnserializeNSResource()
+        public void TestUnserializeNSResource()
         {
             var stream = DNSInput(new byte[] { 3, 100, 110, 115, 7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0 });
             var resource = NSResource.Unserialize(stream, 4);
@@ -383,7 +383,7 @@ namespace DNSProtocol
         }
 
         [Test]
-        public void testSerializeCompleteNSRecord()
+        public void TestSerializeCompleteNSRecord()
         {
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
 			var record = new DNSRecord(
@@ -437,7 +437,7 @@ namespace DNSProtocol
         }
 
         [Test]
-        public void testSerializeSOAResource()
+        public void TestSerializeSOAResource()
         {
 			UInt32 one_hour = 60 * 60;
 			UInt32 one_day = one_hour * 24;
@@ -520,7 +520,7 @@ namespace DNSProtocol
         }
 
         [Test]
-        public void testUnserializeSOAResource()
+        public void TestUnserializeSOAResource()
         {
             var stream = DNSInput(new byte[]
                 {
@@ -555,7 +555,7 @@ namespace DNSProtocol
         }
 
         [Test]
-        public void testSerializeCompleteSOAResource()
+        public void TestSerializeCompleteSOAResource()
         {
 			UInt32 one_hour = 60 * 60;
 			UInt32 one_day = one_hour * 24;
@@ -659,7 +659,7 @@ namespace DNSProtocol
         }
 
         [Test]
-        public void testSerializeCNAMERecord()
+        public void TestSerializeCNAMERecord()
         {
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
 			var record = new CNAMEResource(new Domain("www.example.com"));
@@ -691,7 +691,7 @@ namespace DNSProtocol
         }
 
         [Test]
-        public void testUnserializeCNAMEResource()
+        public void TestUnserializeCNAMEResource()
         {
             var stream = DNSInput(new byte[] { 3, 119, 119, 119, 7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0 });
             var resource = CNAMEResource.Unserialize(stream, 4);
@@ -701,7 +701,7 @@ namespace DNSProtocol
         }
 
         [Test]
-        public void testSerializeCompleteCNAMERecord()
+        public void TestSerializeCompleteCNAMERecord()
         {
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
 			var record = new DNSRecord(
@@ -755,7 +755,7 @@ namespace DNSProtocol
         }
 
         [Test]
-        public void testSerializeMXRecord()
+        public void TestSerializeMXRecord()
         {
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
 			var record = new MXResource(1000, new Domain("mail.example.com"));
@@ -791,7 +791,7 @@ namespace DNSProtocol
         }
 
         [Test]
-        public void testUnserializeMXResource()
+        public void TestUnserializeMXResource()
         {
             var stream = DNSInput(new byte[] { 3, 232, 4, 109, 97, 105, 108, 7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0 });
             var resource = MXResource.Unserialize(stream, 4);
@@ -801,7 +801,7 @@ namespace DNSProtocol
         }
 
         [Test]
-        public void testSerializeCompleteMXRecord()
+        public void TestSerializeCompleteMXRecord()
         {
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
 			var record = new DNSRecord(

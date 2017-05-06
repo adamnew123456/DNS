@@ -12,7 +12,7 @@ namespace DNSProtocol
          * check that both == and Equals work.
          */
         [Test]
-        public void testDomainEquality()
+        public void TestDomainEquality()
         {
             var a = new Domain(new string[] { "example", "com", "" });
             var b = new Domain(new string[] { "example", "com", "" });
@@ -25,7 +25,7 @@ namespace DNSProtocol
         // Domains should be parsable from both forms ending in ., and forms
         // not ending in .
         [Test]
-        public void testParseDomain()
+        public void TestParseDomain()
             {
                 var expected = new Domain(new string[] { "example", "com", "" });
                 var actual_root = new Domain("example.com.");
@@ -37,7 +37,7 @@ namespace DNSProtocol
 
         // Check that the properties on the Domain are sane
         [Test]
-        public void testDomainProperties()
+        public void TestDomainProperties()
         {
             var actual = new Domain("example.com");
 
@@ -49,7 +49,7 @@ namespace DNSProtocol
 
         // Check that domains can be enumerated correctly
         [Test]
-        public void testDomainEnumerator()
+        public void TestDomainEnumerator()
         {
             var actual = new Domain("example.com");
             var expected = new string[] { "example", "com", "" };
@@ -59,7 +59,7 @@ namespace DNSProtocol
 
         // Check that the Domain->string conversion is sane
         [Test]
-        public void testDomainToString()
+        public void TestDomainToString()
         {
             var actual = new Domain("example.com");
             var expected = "example.com.";
@@ -69,7 +69,7 @@ namespace DNSProtocol
 
         // Check that Domain slicing gives the proper results
         [Test]
-        public void testDomainSlice()
+        public void TestDomainSlice()
         {
             var actual = new Domain("foo.example.com");
             var expected = new Domain("example.com");
@@ -79,7 +79,7 @@ namespace DNSProtocol
 
         // Check that subdomains are identified as such
         [Test]
-        public void testSubdomain()
+        public void TestSubdomain()
         {
             var base_domain = new Domain("example.com");
             var subdomain = new Domain("foo.example.com");
@@ -89,7 +89,7 @@ namespace DNSProtocol
 
         // Check that Domain lower-cases its input
         [Test]
-        public void testDomainLowerCase()
+        public void TestDomainLowerCase()
         {
             var actual = new Domain("eXaMpLe.CoM");
 

@@ -38,7 +38,7 @@ namespace DNSResolver
         }
 
         [Test]
-        public void testInitialCacheIsEmpty()
+        public void TestInitialCacheIsEmpty()
         {
             var clock_cache = CreateCache();
             var cache = clock_cache.Item2;
@@ -51,7 +51,7 @@ namespace DNSResolver
         }
 
         [Test]
-        public void testQueryCacheWildcards()
+        public void TestQueryCacheWildcards()
         {
             var clock_cache = CreateCache();
             var cache = clock_cache.Item2;
@@ -80,7 +80,7 @@ namespace DNSResolver
         }
 
         [Test]
-        public void testQueryCacheSpecific()
+        public void TestQueryCacheSpecific()
         {
             var clock_cache = CreateCache();
             var cache = clock_cache.Item2;
@@ -109,7 +109,7 @@ namespace DNSResolver
         }
 
         [Test]
-        public void testQueryCacheTimeout()
+        public void TestQueryCacheTimeout()
         {
             var clock_cache = CreateCache();
             var cache = clock_cache.Item2;
@@ -140,7 +140,7 @@ namespace DNSResolver
         }
 
         [Test]
-        public void testQueryCacheEnforcesMaxSize()
+        public void TestQueryCacheEnforcesMaxSize()
         {
             var clock_cache = CreateCache();
             var cache = clock_cache.Item2;
