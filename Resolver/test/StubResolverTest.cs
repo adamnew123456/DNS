@@ -34,7 +34,7 @@ namespace DNSResolver
 
 			Func<EndPoint, DNSQuestion, bool, DNSPacket> gives_direct_answers = (target, question, is_recursive) =>
 			{
-				Assert.That(relay, Is.EqualTo(relay));
+				Assert.That(target, Is.EqualTo(relay));
 				Assert.That(question, Is.EqualTo(expected_question));
 				return expected_packet;
 			};
@@ -84,7 +84,7 @@ namespace DNSResolver
 
 			Func<EndPoint, DNSQuestion, bool, DNSPacket> gives_direct_answers = (target, question, is_recursive) =>
 			{
-				Assert.That(relay, Is.EqualTo(relay));
+				Assert.That(target, Is.EqualTo(relay));
 				Assert.That(question, Is.EqualTo(expected_question));
 				return expected_packet;
 			};
@@ -132,7 +132,7 @@ namespace DNSResolver
 
 			Func<EndPoint, DNSQuestion, bool, DNSPacket> gives_direct_answers = (target, question, is_recursive) =>
 			{
-				Assert.That(relay, Is.EqualTo(relay));
+				Assert.That(target, Is.EqualTo(relay));
 				Assert.That(question, Is.EqualTo(expected_question));
 				return expected_packet;
 			};
@@ -184,7 +184,7 @@ namespace DNSResolver
 
 			Func<EndPoint, DNSQuestion, bool, DNSPacket> gives_direct_answers = (target, question, is_recursive) =>
 			{
-				Assert.That(relay, Is.EqualTo(relay));
+				Assert.That(target, Is.EqualTo(relay));
 				Assert.That(question, Is.EqualTo(expected_question));
 				return expected_packet;
 			};
@@ -228,7 +228,7 @@ namespace DNSResolver
 
 			Func<EndPoint, DNSQuestion, bool, DNSPacket> gives_direct_answers = (target, question, is_recursive) =>
 			{
-				Assert.That(relay, Is.EqualTo(relay));
+				Assert.That(target, Is.EqualTo(relay));
 				Assert.That(question, Is.EqualTo(expected_question));
 				return expected_packet;
 			};
@@ -276,7 +276,7 @@ namespace DNSResolver
 
 			Func<EndPoint, DNSQuestion, bool, DNSPacket> gives_direct_answers = (target, question, is_recursive) =>
 			{
-				Assert.That(relay, Is.EqualTo(relay));
+				Assert.That(target, Is.EqualTo(relay));
 				Assert.That(question, Is.EqualTo(expected_question));
 				return expected_packet;
 			};
@@ -323,7 +323,7 @@ namespace DNSResolver
 
 			Func<EndPoint, DNSQuestion, bool, DNSPacket> gives_direct_answers = (target, question, is_recursive) =>
 			{
-				Assert.That(relay, Is.EqualTo(relay));
+				Assert.That(target, Is.EqualTo(relay));
 				Assert.That(question, Is.EqualTo(expected_question));
 				return expected_packet;
 			};
@@ -370,7 +370,7 @@ namespace DNSResolver
 
 			Func<EndPoint, DNSQuestion, bool, DNSPacket> gives_direct_answers = (target, question, is_recursive) =>
 			{
-				Assert.That(relay, Is.EqualTo(relay));
+				Assert.That(target, Is.EqualTo(relay));
 				Assert.That(question, Is.EqualTo(expected_question));
 				return expected_packet;
 			};
@@ -413,7 +413,7 @@ namespace DNSResolver
 
 			Func<EndPoint, DNSQuestion, bool, DNSPacket> gives_direct_answers = (target, question, is_recursive) =>
 			{
-				Assert.That(relay, Is.EqualTo(relay));
+				Assert.That(target, Is.EqualTo(relay));
 				Assert.That(question, Is.EqualTo(expected_question));
 				return expected_packet;
 			};
