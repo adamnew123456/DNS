@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Sockets;
 using NUnit.Framework;
 
 using DNSProtocol;
@@ -423,6 +424,53 @@ namespace DNSResolver
 										  ResourceRecordType.CANONICAL_NAME,
 										  AddressClass.INTERNET,
 										  new EndPoint[] { relay });
+
+			var expected_result = new ResolverResult();
+			expected_result.answers = new DNSRecord[] { expected_answer };
+			expected_result.aliases = new DNSRecord[0];
+			expected_result.referrals = new DNSRecord[0];
+			expected_result.referral_additional = new DNSRecord[0];
+
+			Assert.That(result, Is.EqualTo(expected_result));
+		}
+
+		[Test]
+		public void TestStubResolverSequenceOfRelays()
+		{
+			// Make sure that the resolver ignores failing resolvers, as long as at least one succeeds
+			var good_relay = new IPEndPoint(IPAddress.Parse("192.168.0.1"), 53);
+			var bad_relay = new IPEndPoint(IPAddress.Parse("192.168.0.2"), 53);
+
+			var expected_question = new DNSQuestion(
+				new Domain("example.com"),
+				ResourceRecordType.HOST_ADDRESS,
+				AddressClass.INTERNET);
+
+			var expected_answer = new DNSRecord(
+				new Domain("example.com"), AddressClass.INTERNET, 42,
+				new AResource(IPAddress.Parse("192.168.0.1")));
+
+			var expected_packet = new DNSPacket(
+				42, false, QueryType.STANDARD_QUERY, false, false, true, true, ResponseType.NO_ERROR,
+				new DNSQuestion[] { expected_question }, new DNSRecord[] { expected_answer }, new DNSRecord[0], new DNSRecord[0]);
+
+			Func<EndPoint, DNSQuestion, bool, DNSPacket> gives_direct_answers = (target, question, is_recursive) =>
+			{
+				if (target.Equals(bad_relay))
+				{
+					throw new SocketException();
+				}
+
+				Assert.That(target, Is.EqualTo(good_relay));
+				Assert.That(question, Is.EqualTo(expected_question));
+				return expected_packet;
+			};
+
+			var resolver = new StubResolver(new NoopCache(), gives_direct_answers);
+			var result = resolver.Resolve(new Domain("example.com"),
+										  ResourceRecordType.HOST_ADDRESS,
+										  AddressClass.INTERNET,
+										  new EndPoint[] { bad_relay, good_relay });
 
 			var expected_result = new ResolverResult();
 			expected_result.answers = new DNSRecord[] { expected_answer };
