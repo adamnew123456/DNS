@@ -92,7 +92,10 @@ namespace DNSServer
 
             foreach (var zone in sub_zones)
             {
-                if (zone.IsSubdomain(domain))
+				// We should be an authority for foo.example.com itself, even if foo.example.com
+				// is the name of a subzone, since we might have a CNAME or something for the
+				// subzone itself
+                if (zone != domain && zone.IsSubdomain(domain))
                 {
                     return false;
                 }
