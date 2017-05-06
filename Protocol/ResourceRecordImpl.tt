@@ -103,7 +103,7 @@ foreach (object toplevel_ in xmldoc.DocumentElement.ChildNodes)
 		var field_eqs = new List<string>();
 		var field_serializers = new List<string>();
 #>
-    class <#= class_name.Value #>Resource : IDNSResource 
+    public class <#= class_name.Value #>Resource : IDNSResource 
     {        
 	    public ResourceRecordType Type
 	    {
