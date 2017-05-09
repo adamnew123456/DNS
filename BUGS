@@ -133,3 +133,27 @@ Type: update
 Tags: aaaa,ipv6,resource-record
 Date: 2017-04-30 01:22:23-0400
 ---
+Type: update
+Title: Unimplemented resource records should not get mangled
+Origin: chris
+Date: 2017-05-08 21:09:04-0400
+Status: open
+Bug: 4
+---
+Bug: 4
+Date: 2017-05-08 21:09:04-0400
+Origin: chris
+Type: message
+
+One reason why resolvers using this server might be slow is that they are 
+requesting the same information several times, because they don't believe
+that the server is actually giving them valid information back, because
+the server mangles DNS questions that it doesn't understand.
+
+The following changes need to be made:
+
+- DNSProtocol needs a way of recording the contents of unknown questions, so
+  that they can be reconstructed after they are unserialized
+- DNSServer needs to use this facility to return client questions unchanged
+
+---
