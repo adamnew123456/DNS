@@ -276,6 +276,7 @@ namespace DNSServer
 				outbound_recursive_request = inbound.RecursiveRequest;
 
                 logger.Trace("{0}: Parsed inbound request {1}", peer, inbound);
+				outbound_questions.AddRange(inbound.Questions);
 
                 if (inbound.QueryType == QueryType.UNSUPPORTED)
                 {
