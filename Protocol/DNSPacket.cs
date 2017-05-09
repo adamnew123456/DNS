@@ -23,11 +23,19 @@ namespace DNSProtocol
         // The address format of the query (e.g. INternet)
         public AddressClass AddressClass;
 
+		// These are used only for serialization
+		private ResourceRecordType raw_query_type;
+		private AddressClass raw_address_class;
+
+
 		public DNSQuestion(Domain name, ResourceRecordType type, AddressClass address_class)
 		{
 			Name = name;
-			QueryType = type;
-			AddressClass = address_class;
+			QueryType = type.Normalize();
+			AddressClass = address_class.Normalize();
+
+			raw_query_type = type;
+			raw_address_class = address_class;
 		}
 
         public override bool Equals(object other)
@@ -48,33 +56,31 @@ namespace DNSProtocol
             {
                 int hash = 17;
                 hash = hash * 29 + Name.GetHashCode();
-                hash = hash * 29 + (int)QueryType;
-                hash = hash * 29 + (int)AddressClass;
-                return hash;
+				hash = hash * 29 + (int)raw_query_type;
+				hash = hash * 29 + (int)raw_address_class;
+				return hash;
             }
         }
 
         public bool Equals(DNSQuestion other)
         {
-            return this.Name == other.Name &&
-            this.QueryType == other.QueryType &&
-            this.AddressClass.Equals(other.AddressClass);
+			return this.Name == other.Name &&
+				       this.raw_query_type == other.raw_query_type &&
+				       this.raw_address_class == other.raw_address_class;
         }
 
         public override string ToString()
         {
-            return "Question(" +
-            "Name=" + Name + ", " +
-            "Query=" + QueryType + ", " +
-            "AddressClass=" + AddressClass +
-            ")";
+			return String.Format(
+				"Question(Name={0}, Query={1} ({2}), AddressClass={3} ({4})",
+				Name, QueryType, raw_query_type, AddressClass, raw_address_class);
         }
 
         public void Serialize(DNSOutputStream stream)
         {
             stream.WriteDomain(Name);
-            stream.WriteUInt16((UInt16)QueryType);
-            stream.WriteUInt16((UInt16)AddressClass);
+			stream.WriteUInt16((UInt16)raw_query_type);
+			stream.WriteUInt16((UInt16)raw_address_class);
         }
 
         public static DNSQuestion Unserialize(DNSInputStream stream)
@@ -82,7 +88,7 @@ namespace DNSProtocol
             var name = stream.ReadDomain();
 			var query_type = (ResourceRecordType)stream.ReadUInt16();
             var address_class = (AddressClass)stream.ReadUInt16();
-			return new DNSQuestion(name, query_type.Normalize(), address_class.Normalize());
+			return new DNSQuestion(name, query_type, address_class);
         }
     }
 
