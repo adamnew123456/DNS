@@ -63,6 +63,45 @@ namespace DNSProtocol
         }
 
         [Test]
+        public void TestSerializeDNSUnsupportedQuestion()
+        {
+            Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
+
+			var question = new DNSQuestion(
+				new Domain("example.com"),
+				(ResourceRecordType)10, // Unused NULL resource record
+				(AddressClass)3); // Unsupported CHAOSnet class
+			
+            question.Serialize(out_info.Item2);
+            var question_bytes = out_info.Item1.ToArray();
+
+            var expected = new byte[]
+            {
+                7, // Length of example
+                101,
+                120,
+                97,
+                109,
+                112,
+                108,
+                101,
+                3, // Length of com
+                99,
+                111,
+                109,
+                0,
+                // NULL record has code 1
+                0,
+                10,
+                // CHAOS has class 1
+                0,
+                3,
+            };
+
+            Assert.That(question_bytes, Is.EqualTo(expected));
+        }
+
+        [Test]
         public void TestUnserializeDNSQuestion()
         {
             var stream = DNSInput(new byte[]
@@ -80,6 +119,28 @@ namespace DNSProtocol
 				new Domain("example.com"), 
 				ResourceRecordType.HOST_ADDRESS, 
 				AddressClass.INTERNET);
+
+            Assert.That(question, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void TestUnserializeDNSUnsupportedQuestion()
+        {
+            var stream = DNSInput(new byte[]
+                {
+                    7, 101, 120, 97, 109, 112, 108, 101,
+                    3, 99, 111, 109,
+                    0,
+                    0, 10,
+                    0, 3,
+                });
+
+            var question = DNSQuestion.Unserialize(stream);
+
+			var expected = new DNSQuestion(
+				new Domain("example.com"),
+				(ResourceRecordType)10,
+				(AddressClass)3);
 
             Assert.That(question, Is.EqualTo(expected));
         }
@@ -137,16 +198,16 @@ namespace DNSProtocol
                 // This is the recursion available bit, the zero segment,
                 // and the return code
                 128,
-                // Big-endian 1
+                // 1 question
                 0,
                 1,
-                // Big-endian 1
+                // 1 answer
                 0,
                 1,
-                // Big-endian 0
+                // 0 authorities
                 0,
                 0,
-                // Big-endian 0
+                // 0 additional
                 0,
                 0,
                 // The question - A record for example.com
@@ -197,6 +258,70 @@ namespace DNSProtocol
             Assert.That(packet_bytes, Is.EqualTo(expected));
         }
 
+        [Test]
+        public void TestSerializeDNSPacketWithUnsupportedQuestion()
+        {
+			var question = new DNSQuestion(
+				new Domain("example.com"), 
+				(ResourceRecordType)10,  // The NULL RR, supposedly not used
+				(AddressClass)3); // CHAOSNet
+
+			var packet = new DNSPacket(
+				42,
+				true, QueryType.STANDARD_QUERY, true, false, false, true, ResponseType.NO_ERROR,
+				new DNSQuestion[] { question }, new DNSRecord[0], new DNSRecord[0], new DNSRecord[0]);
+
+            Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
+            packet.Serialize(out_info.Item2);
+            var packet_bytes = out_info.Item1.ToArray();
+
+            var expected = new byte[]
+            {
+                // Big-endian 42
+                0,
+                42,
+                // This is the query/resonse bit, the query type, the authority
+                // bit, the truncation bit, and the recursion desired bit
+                4,
+                // This is the recursion available bit, the zero segment,
+                // and the return code
+                128,
+                // 1 question
+                0,
+                1,
+                // 0 answers
+                0,
+                0,
+                // 0 authorities
+                0,
+                0,
+                // 0 additional
+                0,
+                0,
+                // The question - NULL record for example.com
+                7, // Length of example
+                101,
+                120,
+                97,
+                109,
+                112,
+                108,
+                101,
+                3, // Length of com
+                99,
+                111,
+                109,
+                0,
+                // NULL record has class 10
+                0,
+                10,
+                // CHAOS has class 3
+                0,
+                3
+            };
+
+            Assert.That(packet_bytes, Is.EqualTo(expected));
+        }
 
 		[Test]
 		public void TestUnserializeDNSPacket()
@@ -213,16 +338,16 @@ namespace DNSProtocol
                     // This is the recursion available bit, the zero segment,
                     // and the return code
                     128,
-                    // Big-endian 1
+                    // 1 question
                     0,
 					1,
-                    // Big-endian 1
+                    // 1 answer
                     0,
 					1,
-                    // Big-endian 0
+                    // 0 authorities
                     0,
 					0,
-                    // Big-endian 0
+                    // 0 additional
                     0,
 					0,
                     // The question - A record for example.com
@@ -286,6 +411,70 @@ namespace DNSProtocol
 				42,
 				true, QueryType.STANDARD_QUERY, true, false, false, true, ResponseType.NO_ERROR,
 				new DNSQuestion[] { question }, new DNSRecord[] { answer }, new DNSRecord[0], new DNSRecord[0]);
+
+            Assert.That(packet, Is.EqualTo(expected));
+        }
+
+
+		[Test]
+		public void TestUnserializeDNSPacketWithUnsupportedQuestion()
+		{
+
+			var stream = DNSInput(new byte[]
+				{
+                    // Big-endian 42
+                    0,
+					42,
+                    // This is the query/resonse bit, the query type, the authority
+                    // bit, the truncation bit, and the recursion desired bit
+                    4,
+                    // This is the recursion available bit, the zero segment,
+                    // and the return code
+                    128,
+                    // 1 question
+                    0,
+					1,
+                    // 0 answers
+                    0,
+					0,
+                    // 0 authorities
+                    0,
+					0,
+                    // 0 additional
+                    0,
+					0,
+                    // The question - NULL record for example.com
+                    7, // Length of example
+                    101,
+					120,
+					97,
+					109,
+					112,
+					108,
+					101,
+					3, // Length of com
+                    99,
+					111,
+					109,
+					0,
+                    // NULL record has code 10
+                    0,
+					10,
+                    // CHAOS has class 3
+                    0,
+					3,
+				});
+			var packet = DNSPacket.Unserialize(stream);
+
+			var question = new DNSQuestion(
+				new Domain("example.com"),
+				(ResourceRecordType)10,
+				(AddressClass)3);
+
+			var expected = new DNSPacket(
+				42,
+				true, QueryType.STANDARD_QUERY, true, false, false, true, ResponseType.NO_ERROR,
+				new DNSQuestion[] { question }, new DNSRecord[0], new DNSRecord[0], new DNSRecord[0]);
 
             Assert.That(packet, Is.EqualTo(expected));
         }
