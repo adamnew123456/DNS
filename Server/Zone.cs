@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Xml;
 
 using NLog;
@@ -172,7 +173,7 @@ namespace DNSServer
                         throw new InvalidDataException("Resource records must have 'name', 'class' and 'ttl' attributes");
                     }
 
-                    var record_name = new Domain(entry.Attributes["name"].Value);
+					var record_name = new Domain(entry.Attributes["name"].Value);
 
 					AddressClass record_class;
 					switch (entry.Attributes["class"].Value)
@@ -189,9 +190,16 @@ namespace DNSServer
                     {
                         record_ttl = UInt16.Parse(entry.Attributes["ttl"].Value);
                     }
-                    catch (InvalidDataException err)
+                    catch (Exception err)
                     {
-                        throw new InvalidDataException(entry.Attributes["ttl"].Value + " is not a valid TTL");
+						if (err is OverflowException || err is FormatException)
+						{
+							throw new InvalidDataException(entry.Attributes["ttl"].Value + " is not a valid TTL");
+						}
+						else
+						{
+							throw;
+						}
                     }
 
                     IDNSResource resource = null;
@@ -203,15 +211,23 @@ namespace DNSServer
                                 throw new InvalidDataException("A record must have address");
                             }
 
-                            try
-                            {
-								resource = new AResource(IPAddress.Parse(entry.Attributes["address"].Value));
-                            }
-                            catch (FormatException err)
-                            {
-                                throw new InvalidDataException(entry.Attributes["address"].Value + " is not a valid IPv4 address");
-                            }
 
+							IPAddress address;
+							try
+							{
+								address = IPAddress.Parse(entry.Attributes["address"].Value);
+							}
+							catch (FormatException)
+							{
+								throw new InvalidDataException(entry.Attributes["address"].Value + " is not a valid IPv4 address");
+							}
+
+							if (address.AddressFamily != AddressFamily.InterNetwork)
+							{
+								throw new InvalidDataException("A record requires IPv4 address");
+							}
+
+							resource = new AResource(address);
                             logger.Trace("A record: address={0}", ((AResource)resource).Address);
                             break;
 
@@ -222,7 +238,6 @@ namespace DNSServer
                             }
 
 							resource = new NSResource(new Domain(entry.Attributes["nameserver"].Value));
-
                             logger.Trace("NS record: nameserver={0}", ((NSResource)resource).Nameserver);
                             break;
 
@@ -233,7 +248,6 @@ namespace DNSServer
                             }
 
 							resource = new CNAMEResource(new Domain(entry.Attributes["alias"].Value));
-
                             logger.Trace("CNAME record: alias={0}", ((CNAMEResource)resource).Alias);
                             break;
 
@@ -244,16 +258,23 @@ namespace DNSServer
                                 throw new InvalidDataException("MX record must have priority and mailserver");
                             }
 
-                            var mailserver = new Domain(entry.Attributes["mailserver"].Value);
+							var mailserver = new Domain(entry.Attributes["mailserver"].Value);
 
 							UInt16 preference = 0;
                             try
                             {
 								preference = UInt16.Parse(entry.Attributes["priority"].Value);
                             }
-                            catch (FormatException err)
+							catch (Exception err)
                             {
-                                throw new InvalidDataException(entry.Attributes["priority"].Value + " is not a valid priority value");
+								if (err is OverflowException || err is FormatException)
+								{
+									throw new InvalidDataException(entry.Attributes["priority"].Value + " is not a valid priority value");
+								}
+								else
+								{
+									throw;
+								}
                             }
 
 							resource = new MXResource(preference, mailserver);
@@ -279,23 +300,37 @@ namespace DNSServer
 							var hostmaster = new Domain(entry.Attributes["hostmaster"].Value);
 
 							UInt32 serial = 0;
-                            try
-                            {
-                                serial = UInt16.Parse(entry.Attributes["serial"].Value);
-                            }
-                            catch (FormatException err)
-                            {
-                                throw new InvalidDataException(entry.Attributes["serial"].Value + " is not a valid serial number");
-                            }
+							try
+							{
+								serial = UInt16.Parse(entry.Attributes["serial"].Value);
+							}
+							catch (Exception err)
+							{
+								if (err is OverflowException || err is FormatException)
+								{
+									throw new InvalidDataException(entry.Attributes["serial"].Value + " is not a valid serial number");
+								}
+								else
+								{
+									throw;
+								}
+							}
 
 							UInt32 refresh = 0;
                             try
 							{
                                 refresh = UInt16.Parse(entry.Attributes["refresh"].Value);
                             }
-                            catch (FormatException err)
+                            catch (Exception err)
                             {
-                                throw new InvalidDataException(entry.Attributes["refresh"].Value + " is not a valid refresh value");
+								if (err is OverflowException || err is FormatException)
+								{
+									throw new InvalidDataException(entry.Attributes["refresh"].Value + " is not a valid refresh value");
+								}
+								else
+								{
+									throw;
+								}
                             }
 
 							UInt32 retry = 0;
@@ -303,9 +338,16 @@ namespace DNSServer
                             {
                                 retry = UInt16.Parse(entry.Attributes["retry"].Value);
                             }
-                            catch (FormatException err)
+                            catch (Exception err)
                             {
-                                throw new InvalidDataException(entry.Attributes["retry"].Value + " is not a valid retry value");
+								if (err is OverflowException || err is FormatException)
+								{
+									throw new InvalidDataException(entry.Attributes["retry"].Value + " is not a valid retry value");
+								}
+								else
+								{
+									throw;
+								}
                             }
 
 							UInt32 expire = 0;
@@ -313,9 +355,16 @@ namespace DNSServer
                             {
                                 expire = UInt16.Parse(entry.Attributes["expire"].Value);
                             }
-                            catch (FormatException err)
+                            catch (Exception err)
                             {
-                                throw new InvalidDataException(entry.Attributes["expire"].Value + " is not a valid expire value");
+								if (err is OverflowException || err is FormatException)
+								{
+									throw new InvalidDataException(entry.Attributes["expire"].Value + " is not a valid expire value");
+								}
+								else
+								{
+									throw;
+								}
                             }
 
 							UInt32 minttl = 0;
@@ -323,9 +372,16 @@ namespace DNSServer
                             {
                                 minttl = UInt16.Parse(entry.Attributes["min-ttl"].Value);
                             }
-                            catch (FormatException err)
+                            catch (Exception err)
                             {
-                                throw new InvalidDataException(entry.Attributes["min-ttl"].Value + " is not a valid expire value");
+								if (err is OverflowException || err is FormatException)
+								{
+									throw new InvalidDataException(entry.Attributes["min-ttl"].Value + " is not a valid expire value");
+								}
+								else
+								{
+									throw;
+								}
                             }
 
 							resource = new SOAResource(primary_ns, hostmaster, serial, refresh, retry, expire, minttl);
@@ -376,7 +432,7 @@ namespace DNSServer
                     {
                         address = IPAddress.Parse(entry.Attributes["address"].Value);
                     }
-                    catch (FormatException err)
+                    catch (FormatException)
                     {
                         throw new InvalidDataException(entry.Attributes["address"].Value + " is not a valid IPv4 address");
                     }
@@ -385,12 +441,20 @@ namespace DNSServer
                     {
                         port = int.Parse(entry.Attributes["port"].Value);
                     }
-                    catch (FormatException err)
+                    catch (FormatException)
                     {
                         throw new InvalidDataException(entry.Attributes["port"].Value + " is not a valid port");
                     }
 
-                    relays.Add(new IPEndPoint(address, port));
+					try
+					{
+						relays.Add(new IPEndPoint(address, port));
+					}
+					catch (ArgumentOutOfRangeException)
+					{
+						throw new InvalidDataException(entry.Attributes["port"].Value + " is not a valid port");
+					}
+
                     logger.Trace("Found relay: {0}:{1}", address, port);
                 }
                 else
