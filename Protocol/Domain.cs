@@ -176,12 +176,7 @@ namespace DNSProtocol
 
 				if (segment.Length < 1 && current_segment != segments.Length - 1)
 				{
-                    throw new InvalidDataException("Domain segments must start with a letter");
-				}
-
-				if (segment.Length >= 1 && !Char.IsLetter(segment[0]))
-				{
-					throw new InvalidDataException("Domain segments must start with a letter");
+                    throw new InvalidDataException("Domain segments cannot be empty");
 				}
 
                 foreach (var character in segment)
