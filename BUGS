@@ -169,3 +169,9 @@ Date: 2017-05-09 21:58:32-0400
 Bug: 1
 Type: update
 ---
+Type: update
+Bug: 2
+Origin: chris
+Date: 2017-05-10 17:57:17-0400
+Status: closed
+---
