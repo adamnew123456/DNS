@@ -162,8 +162,11 @@ namespace DNSProtocol
                 throw new InvalidDataException("Domains must end in a 0-length segment");
             }
 
+			var allowed_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-";
+
             // Individual segments can only be 63 bytes long
             var total_size = 0;
+			var current_segment = 0;
             foreach (var segment in segments)
             {
                 if (segment.Length > 63)
@@ -171,15 +174,31 @@ namespace DNSProtocol
                     throw new InvalidDataException("Domains cannot have segments longer than 63 characters");
                 }
 
+				if (segment.Length < 1 && current_segment != segments.Length - 1)
+				{
+                    throw new InvalidDataException("Domain segments must start with a letter");
+				}
+
+				if (segment.Length >= 1 && !Char.IsLetter(segment[0]))
+				{
+					throw new InvalidDataException("Domain segments must start with a letter");
+				}
+
                 foreach (var character in segment)
                 {
-                    if (character > 127)
+					if (!allowed_chars.Contains(character))
                     {
-                        throw new InvalidDataException("Domain names are ASCII only");
+                        throw new InvalidDataException("Domain segments can only have letters, digits and hyphens");
                     }
                 }
 
+				if (segment.Length >= 1 && segment[segment.Length - 1] == '-')
+				{
+					throw new InvalidDataException("Domain segments cannot end with a hyphen");
+				}
+
                 total_size += segment.Length;
+				current_segment++;
             }
 
             // The RFC says that the length of the whole domain includes length
@@ -188,7 +207,7 @@ namespace DNSProtocol
 
             if (total_size > 255)
             {
-                throw new InvalidDataException("Domains cannot be longer than 255 bytes (including length octets)");
+                throw new InvalidDataException("Domains cannot be longer than 255 bytes (including separators)");
             }
         }
 
