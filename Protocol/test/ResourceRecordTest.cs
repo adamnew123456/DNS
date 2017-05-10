@@ -857,5 +857,124 @@ namespace DNSProtocol
 
             Assert.That(record_bytes, Is.EqualTo(expected));
         }
+
+        [Test]
+        public void TestSerializePTRRecord()
+        {
+            Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
+			var record = new PTRResource(new Domain("www.example.com"));
+            record.Serialize(out_info.Item2);
+            var record_bytes = out_info.Item1.ToArray();
+
+			var expected = new byte[]
+			{
+				3, // Length of www
+                119,
+				119,
+				119,
+				7, // Length of example
+                101,
+				120,
+				97,
+				109,
+				112,
+				108,
+				101,
+				3, // Length of com
+                99,
+				111,
+				109,
+				0
+			};
+
+            Assert.That(record_bytes, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void TestUnserializePTResource()
+        {
+            var stream = DNSInput(new byte[] {3, 119, 119, 119, 7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0});
+            var resource = NSResource.Unserialize(stream, 4);
+
+			var expected = new NSResource(new Domain("www.example.com"));
+            Assert.That(resource, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void TestSerializeCompletePTRRecord()
+        {
+            Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
+			var record = new DNSRecord(
+				new Domain("1.0.168.192.in-addr.arpa"),
+				AddressClass.INTERNET,
+				42,
+				new PTRResource(new Domain("www.example.com")));
+			
+            record.Serialize(out_info.Item2);
+            var record_bytes = out_info.Item1.ToArray();
+
+            var expected = new byte[]
+            {
+				1, // Length of 1
+				49,
+				1, // Length of 0
+				48,
+				3, // Length of 168
+				49,
+				54,
+				56,
+				3, // Length of 192
+				49,
+				57,
+				50,
+				7, // Length of in-addr
+				105,
+				110,
+				45,
+				97,
+				100,
+				100,
+				114,
+				4, // Length of arpa
+				97,
+				114,
+				112,
+				97,
+                0,
+                // PTR record has code 12
+                0,
+                12,
+                // INTERNET has class 1
+                0,
+                1,
+                // Big-endian representation of 42
+                0,
+                0,
+                0,
+                42,
+                // Record is 17 bytes long
+                0,
+                17,
+                // The record itself - www.example.com
+                3, // Length of www
+                119,
+                119,
+                119,
+				7, // Length of example
+				101,
+				120,
+				97,
+				109,
+				112,
+				108,
+				101,
+				3, // Length of com
+				99,
+				111,
+				109,
+				0
+            };
+            Assert.That(record_bytes, Is.EqualTo(expected));
+        }
     }
 }

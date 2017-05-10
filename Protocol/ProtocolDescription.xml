@@ -38,4 +38,8 @@
     <field name="Preference" type="UInt16" />
     <field name="Mailserver" type="Domain" />
   </rr>
+
+  <rr name="PTR" type="POINTER">
+	<field name="Pointer" type="Domain" />
+  </rr>
 </dns>

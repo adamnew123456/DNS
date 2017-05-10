@@ -64,6 +64,9 @@ namespace DNSProtocol
         // A pointer to the SMTP server for a domain; an MX record
         MAIL_EXCHANGE = 15,
 
+		// A pointer to a domain; unlike CNAMEs, these aren't aliases, but are used for reverse queries
+		POINTER = 12,
+
         // A general code used for an unsupported record/query type.
         UNSUPPORTED = 0
     }
@@ -125,6 +128,7 @@ namespace DNSProtocol
                 case ResourceRecordType.MAIL_EXCHANGE:
                 case ResourceRecordType.NAME_SERVER:
                 case ResourceRecordType.START_OF_AUTHORITY:
+				case ResourceRecordType.POINTER:
                     return resource;
                 default:
                     return ResourceRecordType.UNSUPPORTED;
