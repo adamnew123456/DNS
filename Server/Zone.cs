@@ -20,6 +20,7 @@ namespace DNSServer
     class DNSZone
     {
         private static Logger logger = LogManager.GetCurrentClassLogger();
+		private static Domain reverse_zone = new Domain("in-addr.arpa");
 
 		private Dictionary<Tuple<Domain, ResourceRecordType, AddressClass>, HashSet<DNSRecord>> zone_records;
 
@@ -94,6 +95,14 @@ namespace DNSServer
 		     */
         public bool IsAuthorityFor(Domain domain)
         {
+			// in-addr.arpa is a special case - we're only authorititative for it if the actual
+			// record exists
+			if (reverse_zone.IsSubdomain(domain))
+			{
+				var results = Query(domain, ResourceRecordType.POINTER, AddressClass.INTERNET);
+				return results.Count() > 0;
+			}
+
             if (!StartOfAuthority.Name.IsSubdomain(domain))
             {
                 return false;
@@ -157,12 +166,13 @@ namespace DNSServer
                     continue;
                 }
 
-                bool is_record =
-                    entry.Name == "A" ||
-                    entry.Name == "NS" ||
-                    entry.Name == "CNAME" ||
-                    entry.Name == "MX" ||
-                    entry.Name == "SOA";
+				bool is_record =
+					entry.Name == "A" ||
+					entry.Name == "NS" ||
+					entry.Name == "CNAME" ||
+					entry.Name == "MX" ||
+					entry.Name == "SOA" ||
+					entry.Name == "PTR";
 
                 if (is_record)
                 {
@@ -203,13 +213,13 @@ namespace DNSServer
                     }
 
                     IDNSResource resource = null;
-                    switch (entry.Name)
-                    {
-                        case "A":
-                            if (entry.Attributes["address"] == null)
-                            {
-                                throw new InvalidDataException("A record must have address");
-                            }
+					switch (entry.Name)
+					{
+						case "A":
+							if (entry.Attributes["address"] == null)
+							{
+								throw new InvalidDataException("A record must have address");
+							}
 
 
 							IPAddress address;
@@ -228,45 +238,45 @@ namespace DNSServer
 							}
 
 							resource = new AResource(address);
-                            logger.Trace("A record: address={0}", ((AResource)resource).Address);
-                            break;
+							logger.Trace("A record: address={0}", ((AResource)resource).Address);
+							break;
 
-                        case "NS":
-                            if (entry.Attributes["nameserver"] == null)
-                            {
-                                throw new InvalidDataException("NS record must have a nameserver");
-                            }
+						case "NS":
+							if (entry.Attributes["nameserver"] == null)
+							{
+								throw new InvalidDataException("NS record must have a nameserver");
+							}
 
 							resource = new NSResource(new Domain(entry.Attributes["nameserver"].Value));
-                            logger.Trace("NS record: nameserver={0}", ((NSResource)resource).Nameserver);
-                            break;
+							logger.Trace("NS record: nameserver={0}", ((NSResource)resource).Nameserver);
+							break;
 
-                        case "CNAME":
-                            if (entry.Attributes["alias"] == null)
-                            {
-                                throw new InvalidDataException("CNAME record must have an alias");
-                            }
+						case "CNAME":
+							if (entry.Attributes["alias"] == null)
+							{
+								throw new InvalidDataException("CNAME record must have an alias");
+							}
 
 							resource = new CNAMEResource(new Domain(entry.Attributes["alias"].Value));
-                            logger.Trace("CNAME record: alias={0}", ((CNAMEResource)resource).Alias);
-                            break;
+							logger.Trace("CNAME record: alias={0}", ((CNAMEResource)resource).Alias);
+							break;
 
-                        case "MX":
-                            if (entry.Attributes["priority"] == null ||
-                                entry.Attributes["mailserver"] == null)
-                            {
-                                throw new InvalidDataException("MX record must have priority and mailserver");
-                            }
+						case "MX":
+							if (entry.Attributes["priority"] == null ||
+								entry.Attributes["mailserver"] == null)
+							{
+								throw new InvalidDataException("MX record must have priority and mailserver");
+							}
 
 							var mailserver = new Domain(entry.Attributes["mailserver"].Value);
 
 							UInt16 preference = 0;
-                            try
-                            {
+							try
+							{
 								preference = UInt16.Parse(entry.Attributes["priority"].Value);
-                            }
+							}
 							catch (Exception err)
-                            {
+							{
 								if (err is OverflowException || err is FormatException)
 								{
 									throw new InvalidDataException(entry.Attributes["priority"].Value + " is not a valid priority value");
@@ -275,13 +285,28 @@ namespace DNSServer
 								{
 									throw;
 								}
-                            }
+							}
 
 							resource = new MXResource(preference, mailserver);
 
-                            logger.Trace("MX record: priority={0} mailserver={1}",
-                                ((MXResource)resource).Preference,
-                                ((MXResource)resource).Mailserver);
+							logger.Trace("MX record: priority={0} mailserver={1}",
+								((MXResource)resource).Preference,
+								((MXResource)resource).Mailserver);
+							break;
+
+						case "PTR":
+							if (entry.Attributes["pointer"] == null)
+							{
+								throw new InvalidDataException("PTR record must have pointer");
+							}
+
+							if (!reverse_zone.IsSubdomain(record_name))
+							{
+								throw new InvalidDataException("PTR record be in the in-addr.arpa zone");
+							}
+
+							resource = new PTRResource(new Domain(entry.Attributes["pointer"].Value));
+							logger.Trace("PTR record: pointer={0}", ((PTRResource)resource).Pointer);
                             break;
 
                         case "SOA":

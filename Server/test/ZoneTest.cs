@@ -111,6 +111,29 @@ namespace DNSServer
 		}
 
 		[Test]
+		public void TestAuthorityWhenPTRIsKnown()
+		{
+			// We should be an authority for a PTR record that we know about
+			var zone = new DNSZone(start_of_authority, relays);
+			var ptr = new DNSRecord(
+				new Domain("1.0.168.192.in-addr.arpa"),
+				AddressClass.INTERNET,
+				42,
+				new PTRResource(new Domain("www.example.com")));
+			zone.Add(ptr);
+
+			Assert.That(zone.IsAuthorityFor(new Domain("1.0.168.192.in-addr.arpa")), Is.True);
+		}
+
+		[Test]
+		public void TestNotAuthorityWhenPTRIsUnknown()
+		{
+			// We can't be authorities for PTR records we don't recognize
+			var zone = new DNSZone(start_of_authority, relays);
+			Assert.That(zone.IsAuthorityFor(new Domain("1.0.168.192.in-addr.arpa")), Is.False);
+		}
+
+		[Test]
 		public void TestQuery()
 		{
 			var zone = new DNSZone(start_of_authority, relays);
@@ -125,7 +148,7 @@ namespace DNSServer
 				AddressClass.INTERNET,
 				42,
 				new AResource(IPAddress.Parse("192.168.0.2")));
-			
+
 			// Something that matches the class and record type, but not the domain
 			var www2_a_record = new DNSRecord(
 				new Domain("www2.example.com"),
@@ -298,6 +321,31 @@ namespace DNSServer
 		}
 
 		[Test]
+		public void TestConfigPTRRecord()
+		{
+			var config = ParseXML(@"
+<zone>
+	<SOA name=""example.com"" class=""IN"" ttl=""7200"" 
+         primary-ns=""ns.example.com"" hostmaster=""admin.example.com""
+         serial=""0"" refresh=""3600"" retry=""60"" expire=""3600"" min-ttl=""60"" />
+
+    <PTR name=""1.0.168.192.in-addr.arpa"" class=""IN"" ttl=""3600"" pointer=""www.example.com"" />
+</zone>
+			");
+
+			var zone = DNSZone.Unserialize(config);
+
+			var records = new List<DNSRecord>();
+			records.Add(new DNSRecord(
+				new Domain("1.0.168.192.in-addr.arpa"),
+				AddressClass.INTERNET,
+				3600,
+				new PTRResource(new Domain("www.example.com"))));
+
+			Assert.That(zone.Records, Is.EquivalentTo(records));
+		}
+
+		[Test]
 		public void TestConfigRelay()
 		{
 			var config = ParseXML(@"
@@ -385,7 +433,7 @@ namespace DNSServer
 		}
 
 		[Test]
-		public void TestMissingTTLFails() 
+		public void TestMissingTTLFails()
 		{
 			var config = ParseXML(@"
 <zone>
@@ -958,6 +1006,67 @@ namespace DNSServer
 		}
 
 		[Test]
+		public void TestRelayMissingPort()
+		{
+			var config = ParseXML(@"
+<zone>
+	<SOA name=""example.com"" class=""IN"" ttl=""7200"" 
+         primary-ns=""ns.example.com"" hostmaster=""admin.example.com""
+         serial=""0"" refresh=""3600"" retry=""60"" expire=""3600"" min-ttl=""60"" />
+
+	<relay address=""192.168.0.1"" />
+</zone>
+			");
+			Assert.Throws<InvalidDataException>(() => DNSZone.Unserialize(config));
+		}
+
+		[Test]
+		public void TestPTRGarbagePointer()
+		{
+			var config = ParseXML(@"
+<zone>
+	<SOA name=""example.com"" class=""IN"" ttl=""3600"" 
+         primary-ns=""ns.example.com"" hostmaster=""hostmaster.example.com""
+         refresh=""3600"" retry=""3600"" expire=""3600"" />
+
+	<PTR name=""1.0.168.192.in-addr.arpa"" class=""IN"" ttl=""3600"" pointer=""...example.com"" />
+</zone>
+			");
+			Assert.Throws<InvalidDataException>(() => DNSZone.Unserialize(config));
+		}
+
+		[Test]
+		public void TestPTRWrongZoneName()
+		{
+			var config = ParseXML(@"
+<zone>
+	<SOA name=""example.com"" class=""IN"" ttl=""3600"" 
+         primary-ns=""ns.example.com"" hostmaster=""hostmaster.example.com""
+         refresh=""3600"" retry=""3600"" expire=""3600"" />
+
+	<PTR name=""foo.example.com"" class=""IN"" ttl=""3600"" pointer=""www.example.com"" />
+</zone>
+			");
+			Assert.Throws<InvalidDataException>(() => DNSZone.Unserialize(config));
+		}
+
+		[Test]
+		public void TestPTRMissingPointer()
+		{
+			var config = ParseXML(@"
+<zone>
+	<SOA name=""example.com"" class=""IN"" ttl=""3600"" 
+         primary-ns=""ns.example.com"" hostmaster=""hostmaster.example.com""
+         refresh=""3600"" retry=""3600"" expire=""3600"" />
+
+	<PTR name=""1.0.168.192.in-addr.arpa"" class=""IN"" ttl=""3600"" />
+</zone>
+			");
+			Assert.Throws<InvalidDataException>(() => DNSZone.Unserialize(config));
+		}
+
+
+		[Test]
 		public void TestRelayGarbageAddress()
 		{
 			// The smallest file that you can get away with is an empty zone, which has just an SOA
@@ -1030,21 +1139,6 @@ namespace DNSServer
          serial=""0"" refresh=""3600"" retry=""60"" expire=""3600"" min-ttl=""60"" />
 
 	<relay address=""192.168.0.1"" port=""1000000"" />
-</zone>
-			");
-			Assert.Throws<InvalidDataException>(() => DNSZone.Unserialize(config));
-		}
-
-		[Test]
-		public void TestRelayMissingPort()
-		{
-			var config = ParseXML(@"
-<zone>
-	<SOA name=""example.com"" class=""IN"" ttl=""7200"" 
-         primary-ns=""ns.example.com"" hostmaster=""admin.example.com""
-         serial=""0"" refresh=""3600"" retry=""60"" expire=""3600"" min-ttl=""60"" />
-
-	<relay address=""192.168.0.1"" />
 </zone>
 			");
 			Assert.Throws<InvalidDataException>(() => DNSZone.Unserialize(config));
