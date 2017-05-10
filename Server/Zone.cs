@@ -22,6 +22,14 @@ namespace DNSServer
 
 		private Dictionary<Tuple<Domain, ResourceRecordType, AddressClass>, HashSet<DNSRecord>> zone_records;
 
+		public IEnumerable<DNSRecord> Records
+		{
+			get
+			{
+				return zone_records.Values.SelectMany(_ => _);
+			}
+		}
+
         // We want to make sure that we can efficiently check and see if a domain is a part of our zone
         public DNSRecord StartOfAuthority;
         private HashSet<Domain> sub_zones;
