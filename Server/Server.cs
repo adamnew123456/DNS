@@ -314,7 +314,6 @@ namespace DNSServer
                                 logger.Trace("{0}: Resolver found answer for {1}", peer, question);
 								outbound_rtype = ResponseType.NO_ERROR;
 								outbound_is_authority = answer.IsAuthority;
-								outbound_questions.AddRange(inbound.Questions);
 								outbound_answers.AddRange(answer.Answers);
 								outbound_additional.AddRange(answer.Additional);
 								outbound_authoritative.AddRange(answer.Authority);
@@ -333,7 +332,6 @@ namespace DNSServer
                             logger.Error(err, "{0}: Server failure", peer);
 							outbound_rtype = ResponseType.SERVER_FAILURE;
 							outbound_is_authority = false;
-							outbound_questions.AddRange(inbound.Questions);
                         }
 
                     }
