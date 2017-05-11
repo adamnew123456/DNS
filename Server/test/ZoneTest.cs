@@ -409,6 +409,8 @@ namespace DNSServer
 
 			Assert.That(zone.Records, Is.EquivalentTo(records));
 		}
+
+		[Test]
 		public void TestConfigRelay()
 		{
 			var config = ParseXML(@"
@@ -427,6 +429,31 @@ namespace DNSServer
 			};
 
 			Assert.That(zone.Relays, Is.EquivalentTo(relays));
+		}
+
+		[Test]
+		public void TestSOAMinTTLIsEnforced()
+		{
+			var config = ParseXML(@"
+<zone>
+	<SOA name=""example.com"" class=""IN"" ttl=""7200"" 
+         primary-ns=""ns.example.com"" hostmaster=""admin.example.com""
+         serial=""0"" refresh=""3600"" retry=""60"" expire=""3600"" min-ttl=""60"" />
+
+    <A name=""www.example.com"" class=""IN"" ttl=""5"" address=""192.168.0.1"" />
+</zone>
+			");
+
+			var zone = DNSZone.Unserialize(config);
+
+			var records = new List<DNSRecord>();
+			records.Add(new DNSRecord(
+				new Domain("www.example.com"),
+				AddressClass.INTERNET,
+				60,
+				new AResource(IPv4Address.Parse("192.168.0.1"))));
+
+			Assert.That(zone.Records, Is.EquivalentTo(records));
 		}
 
 		[Test]
@@ -484,10 +511,10 @@ namespace DNSServer
 		[Test]
 		public void TestHighTTLFails()
 		{
-			// TTLs are 16-bit numbers, so any TTL over 18.2 hours doesn't work
+			// TTLs are 32-bit numbers, so any TTL over 136 years doesn't work
 			var config = ParseXML(@"
 <zone>
-	<SOA name=""example.com"" class=""IN"" ttl=""1000000"" 
+	<SOA name=""example.com"" class=""IN"" ttl=""9999999999"" 
          primary-ns=""ns.example.com"" hostmaster=""admin.example.com""
          serial=""0"" refresh=""3600"" retry=""60"" expire=""3600"" min-ttl=""60"" />
 </zone>
@@ -645,7 +672,7 @@ namespace DNSServer
 <zone>
 	<SOA name=""example.com"" class=""IN"" ttl=""3600"" 
          primary-ns=""ns.example.com"" hostmaster=""hostmaster.example.com""
-         serial=""1000000"" refresh=""3600"" retry=""60"" expire=""3600"" min-ttl=""60"" />
+         serial=""9999999999"" refresh=""3600"" retry=""60"" expire=""3600"" min-ttl=""60"" />
 </zone>
 			");
 			Assert.Throws<InvalidDataException>(() => DNSZone.Unserialize(config));
@@ -697,7 +724,7 @@ namespace DNSServer
 <zone>
 	<SOA name=""example.com"" class=""IN"" ttl=""3600"" 
          primary-ns=""ns.example.com"" hostmaster=""hostmaster.example.com""
-         serial=""0"" refresh=""1000000"" retry=""60"" expire=""3600"" min-ttl=""60"" />
+         serial=""0"" refresh=""9999999999"" retry=""60"" expire=""3600"" min-ttl=""60"" />
 </zone>
 			");
 			Assert.Throws<InvalidDataException>(() => DNSZone.Unserialize(config));
@@ -749,7 +776,7 @@ namespace DNSServer
 <zone>
 	<SOA name=""example.com"" class=""IN"" ttl=""3600"" 
          primary-ns=""ns.example.com"" hostmaster=""hostmaster.example.com""
-         serial=""0"" refresh=""3600"" retry=""1000000"" expire=""3600"" min-ttl=""60"" />
+         serial=""0"" refresh=""3600"" retry=""9999999999"" expire=""3600"" min-ttl=""60"" />
 </zone>
 			");
 			Assert.Throws<InvalidDataException>(() => DNSZone.Unserialize(config));
@@ -801,7 +828,7 @@ namespace DNSServer
 <zone>
 	<SOA name=""example.com"" class=""IN"" ttl=""3600"" 
          primary-ns=""ns.example.com"" hostmaster=""hostmaster.example.com""
-         serial=""0"" refresh=""3600"" retry=""60"" expire=""1000000"" min-ttl=""60"" />
+         serial=""0"" refresh=""3600"" retry=""60"" expire=""9999999999"" min-ttl=""60"" />
 </zone>
 			");
 			Assert.Throws<InvalidDataException>(() => DNSZone.Unserialize(config));
@@ -853,7 +880,7 @@ namespace DNSServer
 <zone>
 	<SOA name=""example.com"" class=""IN"" ttl=""3600"" 
          primary-ns=""ns.example.com"" hostmaster=""hostmaster.example.com""
-         serial=""0"" refresh=""3600"" retry=""60"" expire=""3600"" min-ttl=""1000000"" />
+         serial=""0"" refresh=""3600"" retry=""60"" expire=""3600"" min-ttl=""9999999999"" />
 </zone>
 			");
 			Assert.Throws<InvalidDataException>(() => DNSZone.Unserialize(config));

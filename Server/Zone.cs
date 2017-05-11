@@ -200,7 +200,7 @@ namespace DNSServer
 					UInt32 record_ttl = 0;
                     try
                     {
-                        record_ttl = UInt16.Parse(entry.Attributes["ttl"].Value);
+                        record_ttl = UInt32.Parse(entry.Attributes["ttl"].Value);
                     }
                     catch (Exception err)
                     {
@@ -297,9 +297,9 @@ namespace DNSServer
 								throw new InvalidDataException("PTR record must have pointer");
 							}
 
-							if (!reverse_zone.IsSubdomain(record_name))
+							if (!reverse_zone_v4.IsSubdomain(record_name) && !reverse_zone_v6.IsSubdomain(record_name))
 							{
-								throw new InvalidDataException("PTR record be in the in-addr.arpa zone");
+								throw new InvalidDataException("PTR record be in the in-addr.arpa or ip6.arpa zone");
 							}
 
 							resource = new PTRResource(new Domain(entry.Attributes["pointer"].Value));
@@ -326,6 +326,8 @@ namespace DNSServer
 							resource = new AAAAResource(v6address);
 							logger.Trace("AAAA record: address={0}", ((AAAAResource)resource).Address);
 							break;
+
+
                         case "SOA":
                             if (entry.Attributes["primary-ns"] == null ||
                                 entry.Attributes["hostmaster"] == null ||
@@ -344,7 +346,7 @@ namespace DNSServer
 							UInt32 serial = 0;
 							try
 							{
-								serial = UInt16.Parse(entry.Attributes["serial"].Value);
+								serial = UInt32.Parse(entry.Attributes["serial"].Value);
 							}
 							catch (Exception err)
 							{
@@ -361,7 +363,7 @@ namespace DNSServer
 							UInt32 refresh = 0;
                             try
 							{
-                                refresh = UInt16.Parse(entry.Attributes["refresh"].Value);
+                                refresh = UInt32.Parse(entry.Attributes["refresh"].Value);
                             }
                             catch (Exception err)
                             {
@@ -378,7 +380,7 @@ namespace DNSServer
 							UInt32 retry = 0;
                             try
                             {
-                                retry = UInt16.Parse(entry.Attributes["retry"].Value);
+                                retry = UInt32.Parse(entry.Attributes["retry"].Value);
                             }
                             catch (Exception err)
                             {
@@ -395,7 +397,7 @@ namespace DNSServer
 							UInt32 expire = 0;
                             try
                             {
-                                expire = UInt16.Parse(entry.Attributes["expire"].Value);
+                                expire = UInt32.Parse(entry.Attributes["expire"].Value);
                             }
                             catch (Exception err)
                             {
@@ -412,7 +414,7 @@ namespace DNSServer
 							UInt32 minttl = 0;
                             try
                             {
-                                minttl = UInt16.Parse(entry.Attributes["min-ttl"].Value);
+                                minttl = UInt32.Parse(entry.Attributes["min-ttl"].Value);
                             }
                             catch (Exception err)
                             {
