@@ -111,7 +111,7 @@ namespace DNSServer
 		}
 
 		[Test]
-		public void TestAuthorityWhenPTRIsKnown()
+		public void TestAuthorityWhenPTRIsKnownV4()
 		{
 			// We should be an authority for a PTR record that we know about
 			var zone = new DNSZone(start_of_authority, relays);
@@ -346,6 +346,30 @@ namespace DNSServer
 		}
 
 		[Test]
+		[Test]
+		public void TestConfigAAAARecord()
+		{
+			var config = ParseXML(@"
+<zone>
+	<SOA name=""example.com"" class=""IN"" ttl=""7200"" 
+         primary-ns=""ns.example.com"" hostmaster=""admin.example.com""
+         serial=""0"" refresh=""3600"" retry=""60"" expire=""3600"" min-ttl=""60"" />
+
+    <AAAA name=""www.example.com"" class=""IN"" ttl=""3600"" address=""2001:0DB8:AC10:FE01:0000:0000:0000:0000"" />
+</zone>
+			");
+
+			var zone = DNSZone.Unserialize(config);
+
+			var records = new List<DNSRecord>();
+			records.Add(new DNSRecord(
+				new Domain("www.example.com"),
+				AddressClass.INTERNET,
+				3600,
+				new AAAAResource(IPv6Address.Parse("2001:0DB8:AC10:FE01:0000:0000:0000:0000"))));
+
+			Assert.That(zone.Records, Is.EquivalentTo(records));
+		}
 		public void TestConfigRelay()
 		{
 			var config = ParseXML(@"
@@ -1139,6 +1163,50 @@ namespace DNSServer
          serial=""0"" refresh=""3600"" retry=""60"" expire=""3600"" min-ttl=""60"" />
 
 	<relay address=""192.168.0.1"" port=""1000000"" />
+</zone>
+			");
+			Assert.Throws<InvalidDataException>(() => DNSZone.Unserialize(config));
+		}
+		[Test]
+		public void TestAAAAGarbageAddress()
+		{
+			var config = ParseXML(@"
+<zone>
+	<SOA name=""example.com"" class=""IN"" ttl=""3600"" 
+         primary-ns=""ns.example.com"" hostmaster=""hostmaster.example.com""
+         refresh=""3600"" retry=""3600"" expire=""3600"" />
+
+	<AAAA name=""example.com"" class=""IN"" ttl=""3600"" address=""blargh"" />
+</zone>
+			");
+			Assert.Throws<InvalidDataException>(() => DNSZone.Unserialize(config));
+		}
+
+		[Test]
+		public void TestAAAAIPv4Address()
+		{
+			var config = ParseXML(@"
+<zone>
+	<SOA name=""example.com"" class=""IN"" ttl=""3600"" 
+         primary-ns=""ns.example.com"" hostmaster=""hostmaster.example.com""
+         refresh=""3600"" retry=""3600"" expire=""3600"" />
+
+	<AAAA name=""example.com"" class=""IN"" ttl=""3600"" address=""192.168.0.1"" />
+</zone>
+			");
+			Assert.Throws<InvalidDataException>(() => DNSZone.Unserialize(config));
+		}
+
+		[Test]
+		public void TestAAAAMissingAddress()
+		{
+			var config = ParseXML(@"
+<zone>
+	<SOA name=""example.com"" class=""IN"" ttl=""3600"" 
+         primary-ns=""ns.example.com"" hostmaster=""hostmaster.example.com""
+         refresh=""3600"" retry=""3600"" expire=""3600"" />
+
+	<AAAA name=""example.com"" class=""IN"" ttl=""3600"" />
 </zone>
 			");
 			Assert.Throws<InvalidDataException>(() => DNSZone.Unserialize(config));

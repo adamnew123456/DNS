@@ -172,7 +172,8 @@ namespace DNSServer
 					entry.Name == "CNAME" ||
 					entry.Name == "MX" ||
 					entry.Name == "SOA" ||
-					entry.Name == "PTR";
+					entry.Name == "PTR" ||
+					entry.Name == "AAAA";
 
                 if (is_record)
                 {
@@ -304,6 +305,26 @@ namespace DNSServer
 							logger.Trace("PTR record: pointer={0}", ((PTRResource)resource).Pointer);
                             break;
 
+						case "AAAA":
+							if (entry.Attributes["address"] == null)
+							{
+								throw new InvalidDataException("AAAA record must have address");
+							}
+
+
+							IPv6Address v6address;
+							try
+							{
+								v6address = IPv6Address.Parse(entry.Attributes["address"].Value);
+							}
+							catch (FormatException)
+							{
+								throw new InvalidDataException(entry.Attributes["address"].Value + " is not a valid IPv4 address");
+							}
+
+							resource = new AAAAResource(v6address);
+							logger.Trace("AAAA record: address={0}", ((AAAAResource)resource).Address);
+							break;
                         case "SOA":
                             if (entry.Attributes["primary-ns"] == null ||
                                 entry.Attributes["hostmaster"] == null ||

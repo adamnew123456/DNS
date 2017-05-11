@@ -106,7 +106,7 @@ namespace DNSResolver
 		}
 
 		[Test]
-		public void TestStubResolverAcceptsAliases()
+		public void TestStubResolverAcceptsAliasesForARecords()
 		{
 			// Make sure that a single alias is supported
 			var relay = new IPEndPoint(IPAddress.Parse("192.168.0.1"), 53);
@@ -154,7 +154,55 @@ namespace DNSResolver
 		}
 
 		[Test]
-		public void TestStubResolverAcceptsSeveralAliases()
+		public void TestStubResolverAcceptsAliasesForAAAARecords()
+		{
+			// Make sure that a single alias is supported
+			var relay = new IPEndPoint(IPAddress.Parse("192.168.0.1"), 53);
+
+			var expected_question = new DNSQuestion(
+				new Domain("example.com"),
+				ResourceRecordType.HOST_6ADDRESS,
+				AddressClass.INTERNET);
+
+			var expected_alias_answer = new DNSRecord(
+				new Domain("example.com"), AddressClass.INTERNET, 42,
+				new CNAMEResource(new Domain("www.example.com")));
+
+			var expected_addr_answer = new DNSRecord(
+				new Domain("www.example.com"), AddressClass.INTERNET, 42,
+				new AAAAResource(IPv6Address.Parse("2001:cafe:beef::")));
+
+			var expected_packet = new DNSPacket(
+				42, false, QueryType.STANDARD_QUERY, false, false, true, true, ResponseType.NO_ERROR,
+				new DNSQuestion[] { expected_question },
+				new DNSRecord[] { expected_alias_answer, expected_addr_answer },
+				new DNSRecord[0], new DNSRecord[0]);
+
+
+			Func<EndPoint, DNSQuestion, bool, DNSPacket> gives_direct_answers = (target, question, is_recursive) =>
+			{
+				Assert.That(target, Is.EqualTo(relay));
+				Assert.That(question, Is.EqualTo(expected_question));
+				return expected_packet;
+			};
+
+			var resolver = new StubResolver(new NoopCache(), gives_direct_answers);
+			var result = resolver.Resolve(new Domain("example.com"),
+			                              ResourceRecordType.HOST_6ADDRESS,
+										  AddressClass.INTERNET,
+										  new EndPoint[] { relay });
+
+			var expected_result = new ResolverResult();
+			expected_result.answers = new DNSRecord[] { expected_addr_answer };
+			expected_result.aliases = new DNSRecord[] { expected_alias_answer };
+			expected_result.referrals = new DNSRecord[0];
+			expected_result.referral_additional = new DNSRecord[0];
+
+			Assert.That(result, Is.EqualTo(expected_result));
+		}
+
+		[Test]
+		public void TestStubResolverAcceptsSeveralAliasesForARecords()
 		{
 			// Make sure that chains of aliases are supported
 			var relay = new IPEndPoint(IPAddress.Parse("192.168.0.1"), 53);
@@ -206,6 +254,58 @@ namespace DNSResolver
 		}
 
 		[Test]
+		public void TestStubResolverAcceptsSeveralAliasesForAAAARecords()
+		{
+			// Make sure that chains of aliases are supported
+			var relay = new IPEndPoint(IPAddress.Parse("192.168.0.1"), 53);
+
+			var expected_question = new DNSQuestion(
+				new Domain("example.com"),
+				ResourceRecordType.HOST_6ADDRESS,
+				AddressClass.INTERNET);
+
+			var expected_alias_answer_1 = new DNSRecord(
+				new Domain("example.com"), AddressClass.INTERNET, 42,
+				new CNAMEResource(new Domain("www.example.com")));
+
+			var expected_alias_answer_2 = new DNSRecord(
+				new Domain("www.example.com"), AddressClass.INTERNET, 42,
+				new CNAMEResource(new Domain("web1.www.example.com")));
+
+			var expected_addr_answer = new DNSRecord(
+				new Domain("web1.www.example.com"), AddressClass.INTERNET, 42,
+				new AAAAResource(IPv6Address.Parse("2001:cafe:beef::")));
+
+			var expected_packet = new DNSPacket(
+				42, false, QueryType.STANDARD_QUERY, false, false, true, true, ResponseType.NO_ERROR,
+				new DNSQuestion[] { expected_question },
+				new DNSRecord[] { expected_alias_answer_1, expected_alias_answer_2, expected_addr_answer },
+				new DNSRecord[0], new DNSRecord[0]);
+
+
+			Func<EndPoint, DNSQuestion, bool, DNSPacket> gives_direct_answers = (target, question, is_recursive) =>
+			{
+				Assert.That(target, Is.EqualTo(relay));
+				Assert.That(question, Is.EqualTo(expected_question));
+				return expected_packet;
+			};
+
+			var resolver = new StubResolver(new NoopCache(), gives_direct_answers);
+			var result = resolver.Resolve(new Domain("example.com"),
+										  ResourceRecordType.HOST_6ADDRESS,
+										  AddressClass.INTERNET,
+										  new EndPoint[] { relay });
+
+			var expected_result = new ResolverResult();
+			expected_result.answers = new DNSRecord[] { expected_addr_answer };
+			expected_result.aliases = new DNSRecord[] { expected_alias_answer_1, expected_alias_answer_2 };
+			expected_result.referrals = new DNSRecord[0];
+			expected_result.referral_additional = new DNSRecord[0];
+
+			Assert.That(result, Is.EqualTo(expected_result));
+		}
+
+		[Test]
 		public void TestStubResolverReturnsRedirections()
 		{
 			// Make sure that any redirections are returned, even if there aren't any actual
@@ -223,7 +323,7 @@ namespace DNSResolver
 
 			var expected_packet = new DNSPacket(
 				42, false, QueryType.STANDARD_QUERY, false, false, true, true, ResponseType.NO_ERROR,
-				new DNSQuestion[] { expected_question }, new DNSRecord[0], new DNSRecord[] { expected_ns_answer }, 
+				new DNSQuestion[] { expected_question }, new DNSRecord[0], new DNSRecord[] { expected_ns_answer },
 				new DNSRecord[0]);
 
 
@@ -250,7 +350,7 @@ namespace DNSResolver
 		}
 
 		[Test]
-		public void TestStubResolverReturnsRedirectionsWithGlue()
+		public void TestStubResolverReturnsRedirectionsWithAResourceGlue()
 		{
 			// Make sure that any redirections are returned, even if there aren't any actual
 			// results, along with their glue if provided
@@ -267,11 +367,59 @@ namespace DNSResolver
 
 			var expected_glue_answer = new DNSRecord(
 				new Domain("ns.example.com"), AddressClass.INTERNET, 42,
-				new AResource(IPAddress.Parse("192.168.0.2")));
+				new AResource(IPv4Address.Parse("192.168.0.2")));
 
 			var expected_packet = new DNSPacket(
 				42, false, QueryType.STANDARD_QUERY, false, false, true, true, ResponseType.NO_ERROR,
-				new DNSQuestion[] { expected_question }, new DNSRecord[0], new DNSRecord[] { expected_ns_answer }, 
+				new DNSQuestion[] { expected_question }, new DNSRecord[0], new DNSRecord[] { expected_ns_answer },
+				new DNSRecord[] { expected_glue_answer });
+
+
+			Func<EndPoint, DNSQuestion, bool, DNSPacket> gives_direct_answers = (target, question, is_recursive) =>
+			{
+				Assert.That(target, Is.EqualTo(relay));
+				Assert.That(question, Is.EqualTo(expected_question));
+				return expected_packet;
+			};
+
+			var resolver = new StubResolver(new NoopCache(), gives_direct_answers);
+			var result = resolver.Resolve(new Domain("example.com"),
+										  ResourceRecordType.HOST_ADDRESS,
+										  AddressClass.INTERNET,
+										  new EndPoint[] { relay });
+
+			var expected_result = new ResolverResult();
+			expected_result.answers = new DNSRecord[0];
+			expected_result.aliases = new DNSRecord[0];
+			expected_result.referrals = new DNSRecord[] { expected_ns_answer };
+			expected_result.referral_additional = new DNSRecord[] { expected_glue_answer };
+
+			Assert.That(result, Is.EqualTo(expected_result));
+		}
+
+		[Test]
+		public void TestStubResolverReturnsRedirectionsWithAAAAResourceGlue()
+		{
+			// Make sure that any redirections are returned, even if there aren't any actual
+			// results, along with their glue if provided
+			var relay = new IPEndPoint(IPAddress.Parse("192.168.0.1"), 53);
+
+			var expected_question = new DNSQuestion(
+				new Domain("example.com"),
+				ResourceRecordType.HOST_ADDRESS,
+				AddressClass.INTERNET);
+
+			var expected_ns_answer = new DNSRecord(
+				new Domain("example.com"), AddressClass.INTERNET, 42,
+				new NSResource(new Domain("ns.example.com")));
+
+			var expected_glue_answer = new DNSRecord(
+				new Domain("ns.example.com"), AddressClass.INTERNET, 42,
+				new AAAAResource(IPv6Address.Parse("2001:cafe:beef::")));
+
+			var expected_packet = new DNSPacket(
+				42, false, QueryType.STANDARD_QUERY, false, false, true, true, ResponseType.NO_ERROR,
+				new DNSQuestion[] { expected_question }, new DNSRecord[0], new DNSRecord[] { expected_ns_answer },
 				new DNSRecord[] { expected_glue_answer });
 
 

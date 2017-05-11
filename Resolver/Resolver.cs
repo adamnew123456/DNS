@@ -215,7 +215,6 @@ namespace DNSResolver
 				logger.Trace("Cache returned {0} resources", records.Count);
 			}
 
-
 			var any_results = false;
 			var results = new List<DNSRecord>();
 			var aliases = new HashSet<Domain>();
@@ -230,7 +229,7 @@ namespace DNSResolver
 			// (But only if we're looking specifically for A records - other records
 			// generally can't have aliases). Here, we're hoping that the server gives us the addresses
 			// in what is basically a topologically sorted order (think of chained CNAMEs as a graph).
-			if (rtype == ResourceRecordType.HOST_ADDRESS)
+			if (rtype == ResourceRecordType.HOST_ADDRESS || rtype == ResourceRecordType.HOST_6ADDRESS)
 			{
 				foreach (var record in records)
 				{
@@ -280,10 +279,21 @@ namespace DNSResolver
 			// to record them as well
 			foreach (var record in records)
 			{
-				if (record.Resource != null && record.Resource.Type == ResourceRecordType.HOST_ADDRESS && nameservers.Contains(record.Name))
+				if (record.Resource != null &&
+					(record.Resource.Type == ResourceRecordType.HOST_ADDRESS ||
+					 record.Resource.Type == ResourceRecordType.HOST_6ADDRESS) &&
+					nameservers.Contains(record.Name))
 				{
 					logger.Trace("Recording nameserver glue {0}", record);
-					nameserver_addrs.Add(((AResource)record.Resource).Address);
+					switch (record.Resource.Type)
+					{
+						case ResourceRecordType.HOST_ADDRESS:
+							nameserver_addrs.Add(((AResource)record.Resource).Address);
+							break;
+						case ResourceRecordType.HOST_6ADDRESS:
+							nameserver_addrs.Add(((AAAAResource)record.Resource).Address);
+							break;
+					}
 					nameserver_addr_rrs.Add(record);
 
 					any_results = true;

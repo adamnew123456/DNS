@@ -126,6 +126,9 @@ namespace DNSProtocol
 				case ResourceRecordType.POINTER:
 					resource = PTRResource.Unserialize(stream, record_size);
 					break;
+				case ResourceRecordType.HOST_6ADDRESS:
+					resource = AAAAResource.Unserialize(stream, record_size);
+					break;
                 case ResourceRecordType.UNSUPPORTED:
                     // Advance the byte counter - even if we can't parse it,
                     // we have to properly ignore it

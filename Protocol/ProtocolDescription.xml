@@ -17,6 +17,10 @@
   <rr name="A" type="HOST_ADDRESS">
     <field name="Address" type="IPv4Address" />
   </rr>
+	
+  <rr name="AAAA" type="HOST_6ADDRESS">
+    <field name="Address" type="IPv6Address" />
+  </rr>
 
   <rr name="NS" type="NAME_SERVER">
     <field name="Nameserver" type="Domain" />

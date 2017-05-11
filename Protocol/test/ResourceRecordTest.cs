@@ -976,5 +976,93 @@ namespace DNSProtocol
             };
             Assert.That(record_bytes, Is.EqualTo(expected));
         }
+
+        [Test]
+        public void TestSerializeAAAAResource()
+        {
+            Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
+			var record = new AAAAResource(
+				IPv6Address.Parse("2001:0DB8:AC10:FE01:0000:0000:0000:0000"));
+            record.Serialize(out_info.Item2);
+            var record_bytes = out_info.Item1.ToArray();
+
+            var expected = new byte[] {
+				0x20, 0x01, 0x0D, 0xB8, 0xAC, 0x10, 0xFE, 0x01, 0, 0, 0, 0, 0, 0, 0, 0
+			};
+            Assert.That(record_bytes, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void TestUnserializeAAAAResource()
+        {
+            var stream = DNSInput(new byte[] { 0x20, 0x01, 0x0D, 0xB8, 0xAC, 0x10, 0xFE, 0x01, 0, 0, 0, 0, 0, 0, 0, 0 });
+            var resource = AAAAResource.Unserialize(stream, 4);
+
+			var expected = new AAAAResource(IPv6Address.Parse("2001:0DB8:AC10:FE01:0000:0000:0000:0000"));
+            Assert.That(resource, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void TestSerializeCompleteAAAAResource()
+        {
+            Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
+			var record = new DNSRecord(
+				new Domain("example.com"),
+				AddressClass.INTERNET,
+				42,
+				new AAAAResource(IPv6Address.Parse("2001:0DB8:AC10:FE01:0000:0000:0000:0000")));
+			
+            record.Serialize(out_info.Item2);
+            var record_bytes = out_info.Item1.ToArray();
+
+            var expected = new byte[]
+            {
+                7, // Length of example
+                101,
+                120,
+                97,
+                109,
+                112,
+                108,
+                101,
+                3, // Length of com
+                99,
+                111,
+                109,
+                0,
+                // AAAA record has code 28
+                0,
+                28,
+                // INTERNET has class 1
+                0,
+                1,
+                // Big-endian representation of 42
+                0,
+                0,
+                0,
+                42,
+                // Record is 4 bytes long
+                0,
+                16,
+                // The record itself
+				0x20, 
+				0x01, 
+				0x0D, 
+				0xB8, 
+				0xAC, 
+				0x10, 
+				0xFE, 
+				0x01, 
+				0, 
+				0, 
+				0, 
+				0, 
+				0, 
+				0, 
+				0,
+				0
+            };
+            Assert.That(record_bytes, Is.EqualTo(expected));
+        }
     }
 }

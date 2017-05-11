@@ -67,6 +67,9 @@ namespace DNSProtocol
 		// A pointer to a domain; unlike CNAMEs, these aren't aliases, but are used for reverse queries
 		POINTER = 12,
 
+		// An IPv6 host address
+		HOST_6ADDRESS = 28,
+
         // A general code used for an unsupported record/query type.
         UNSUPPORTED = 0
     }
@@ -129,6 +132,7 @@ namespace DNSProtocol
                 case ResourceRecordType.NAME_SERVER:
                 case ResourceRecordType.START_OF_AUTHORITY:
 				case ResourceRecordType.POINTER:
+				case ResourceRecordType.HOST_6ADDRESS:
                     return resource;
                 default:
                     return ResourceRecordType.UNSUPPORTED;
@@ -740,6 +744,37 @@ namespace DNSProtocol
 		public static new IPv4Address Parse(string address)
 		{
 			return new IPv4Address(IPAddress.Parse(address));
+		}
+	}
+
+	/**
+	 * A wrapper around IPAddress that allows only IPv6 addresses.
+	 */
+	public class IPv6Address: IPAddress
+	{
+		public IPv6Address(long new_address): base(new_address)
+		{
+			if (AddressFamily != AddressFamily.InterNetworkV6)
+			{
+				throw new ArgumentException(this + " is not a valid IPv6 address");
+			}
+		}
+
+		public IPv6Address(byte[] address) : base(address)
+		{
+			if (AddressFamily != AddressFamily.InterNetworkV6)
+			{
+				throw new ArgumentException(this + " is not a valid IPv6 address");
+			}
+		}
+
+		public IPv6Address(IPAddress address) : this(address.GetAddressBytes())
+		{
+		}
+
+		public static new IPv6Address Parse(string address)
+		{
+			return new IPv6Address(IPAddress.Parse(address));
 		}
 	}
 }
