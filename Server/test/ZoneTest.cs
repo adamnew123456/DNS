@@ -126,6 +126,21 @@ namespace DNSServer
 		}
 
 		[Test]
+		public void TestAuthorityWhenPTRIsKnownV6()
+		{
+			// We should be an authority for a PTR record that we know about
+			var zone = new DNSZone(start_of_authority, relays);
+			var ptr = new DNSRecord(
+				new Domain("b.a.9.8.7.6.5.0.4.0.0.0.3.0.0.0.2.0.0.0.1.0.0.0.0.0.0.0.1.2.3.4.ip6.arpa"),
+				AddressClass.INTERNET,
+				42,
+				new PTRResource(new Domain("www.example.com")));
+			zone.Add(ptr);
+
+			Assert.That(zone.IsAuthorityFor(new Domain("b.a.9.8.7.6.5.0.4.0.0.0.3.0.0.0.2.0.0.0.1.0.0.0.0.0.0.0.1.2.3.4.ip6.arpa")), Is.True);
+		}
+
+		[Test]
 		public void TestNotAuthorityWhenPTRIsUnknown()
 		{
 			// We can't be authorities for PTR records we don't recognize
@@ -321,7 +336,7 @@ namespace DNSServer
 		}
 
 		[Test]
-		public void TestConfigPTRRecord()
+		public void TestConfigPTRRecordV4()
 		{
 			var config = ParseXML(@"
 <zone>
@@ -346,6 +361,30 @@ namespace DNSServer
 		}
 
 		[Test]
+		public void TestConfigPTRRecordV6()
+		{
+			var config = ParseXML(@"
+<zone>
+	<SOA name=""example.com"" class=""IN"" ttl=""7200"" 
+         primary-ns=""ns.example.com"" hostmaster=""admin.example.com""
+         serial=""0"" refresh=""3600"" retry=""60"" expire=""3600"" min-ttl=""60"" />
+
+    <PTR name=""b.a.9.8.7.6.5.0.4.0.0.0.3.0.0.0.2.0.0.0.1.0.0.0.0.0.0.0.1.2.3.4.ip6.arpa"" class=""IN"" ttl=""3600"" pointer=""www.example.com"" />
+</zone>
+			");
+
+			var zone = DNSZone.Unserialize(config);
+
+			var records = new List<DNSRecord>();
+			records.Add(new DNSRecord(
+				new Domain("b.a.9.8.7.6.5.0.4.0.0.0.3.0.0.0.2.0.0.0.1.0.0.0.0.0.0.0.1.2.3.4.ip6.arpa"),
+				AddressClass.INTERNET,
+				3600,
+				new PTRResource(new Domain("www.example.com"))));
+
+			Assert.That(zone.Records, Is.EquivalentTo(records));
+		}
+
 		[Test]
 		public void TestConfigAAAARecord()
 		{

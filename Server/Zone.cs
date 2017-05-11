@@ -20,7 +20,8 @@ namespace DNSServer
     class DNSZone
     {
         private static Logger logger = LogManager.GetCurrentClassLogger();
-		private static Domain reverse_zone = new Domain("in-addr.arpa");
+		private static Domain reverse_zone_v4 = new Domain("in-addr.arpa");
+		private static Domain reverse_zone_v6 = new Domain("ip6.arpa");
 
 		private Dictionary<Tuple<Domain, ResourceRecordType, AddressClass>, HashSet<DNSRecord>> zone_records;
 
@@ -95,9 +96,9 @@ namespace DNSServer
 		     */
         public bool IsAuthorityFor(Domain domain)
         {
-			// in-addr.arpa is a special case - we're only authorititative for it if the actual
+			// in-addr.arpa and ip6.arpa are a special case - we're only authorititative for it if the actual
 			// record exists
-			if (reverse_zone.IsSubdomain(domain))
+			if (reverse_zone_v4.IsSubdomain(domain) || reverse_zone_v6.IsSubdomain(domain))
 			{
 				var results = Query(domain, ResourceRecordType.POINTER, AddressClass.INTERNET);
 				return results.Count() > 0;
