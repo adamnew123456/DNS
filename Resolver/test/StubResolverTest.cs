@@ -26,7 +26,7 @@ namespace DNSResolver
 
 			var expected_answer = new DNSRecord(
 				new Domain("example.com"), AddressClass.INTERNET, 42,
-				new AResource(IPAddress.Parse("192.168.0.1")));
+				new AResource(IPv4Address.Parse("192.168.0.1")));
 
 			var expected_packet = new DNSPacket(
 				42, false, QueryType.STANDARD_QUERY, false, false, true, true, ResponseType.NO_ERROR,
@@ -122,7 +122,7 @@ namespace DNSResolver
 
 			var expected_addr_answer = new DNSRecord(
 				new Domain("www.example.com"), AddressClass.INTERNET, 42,
-				new AResource(IPAddress.Parse("192.168.0.1")));
+				new AResource(IPv4Address.Parse("192.168.0.1")));
 
 			var expected_packet = new DNSPacket(
 				42, false, QueryType.STANDARD_QUERY, false, false, true, true, ResponseType.NO_ERROR,
@@ -174,7 +174,7 @@ namespace DNSResolver
 
 			var expected_addr_answer = new DNSRecord(
 				new Domain("web1.www.example.com"), AddressClass.INTERNET, 42,
-				new AResource(IPAddress.Parse("192.168.0.1")));
+				new AResource(IPv4Address.Parse("192.168.0.1")));
 
 			var expected_packet = new DNSPacket(
 				42, false, QueryType.STANDARD_QUERY, false, false, true, true, ResponseType.NO_ERROR,
@@ -310,11 +310,11 @@ namespace DNSResolver
 
 			var unexpected_answer = new DNSRecord(
 				new Domain("bogus.com"), AddressClass.INTERNET, 42,
-				new AResource(IPAddress.Parse("192.168.0.1")));
+				new AResource(IPv4Address.Parse("192.168.0.1")));
 
 			var expected_answer = new DNSRecord(
 				new Domain("example.com"), AddressClass.INTERNET, 42,
-				new AResource(IPAddress.Parse("192.168.0.2")));
+				new AResource(IPv4Address.Parse("192.168.0.2")));
 
 			var expected_packet = new DNSPacket(
 				42, false, QueryType.STANDARD_QUERY, false, false, true, true, ResponseType.NO_ERROR,
@@ -361,7 +361,7 @@ namespace DNSResolver
 
 			var unexpected_glue_answer = new DNSRecord(
 				new Domain("ns2.example.com"), AddressClass.INTERNET, 42,
-				new AResource(IPAddress.Parse("192.168.0.2")));
+				new AResource(IPv4Address.Parse("192.168.0.2")));
 
 			var expected_packet = new DNSPacket(
 				42, false, QueryType.STANDARD_QUERY, false, false, true, true, ResponseType.NO_ERROR,
@@ -448,7 +448,7 @@ namespace DNSResolver
 
 			var expected_answer = new DNSRecord(
 				new Domain("example.com"), AddressClass.INTERNET, 42,
-				new AResource(IPAddress.Parse("192.168.0.1")));
+				new AResource(IPv4Address.Parse("192.168.0.1")));
 
 			var expected_packet = new DNSPacket(
 				42, false, QueryType.STANDARD_QUERY, false, false, true, true, ResponseType.NO_ERROR,

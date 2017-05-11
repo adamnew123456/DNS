@@ -271,7 +271,7 @@ namespace DNSProtocol
         public void TestSerializeAResource()
         {
             Tuple<MemoryStream, DNSOutputStream> out_info = DNSOutput();
-			var record = new AResource(new IPAddress(new byte[] { 192, 168, 0, 1 }));
+			var record = new AResource(IPv4Address.Parse("192.168.0.1"));
             record.Serialize(out_info.Item2);
             var record_bytes = out_info.Item1.ToArray();
 
@@ -285,7 +285,7 @@ namespace DNSProtocol
             var stream = DNSInput(new byte[] { 192, 168, 0, 1 });
             var resource = AResource.Unserialize(stream, 4);
 
-			var expected = new AResource(new IPAddress(new byte[] { 192, 168, 0, 1 }));
+			var expected = new AResource(IPv4Address.Parse("192.168.0.1"));
             Assert.That(resource, Is.EqualTo(expected));
         }
 
@@ -297,7 +297,7 @@ namespace DNSProtocol
 				new Domain("example.com"),
 				AddressClass.INTERNET,
 				42,
-				new AResource(new IPAddress(new byte[] { 192, 168, 0, 1 })));
+				new AResource(IPv4Address.Parse("192.168.0.1")));
 			
             record.Serialize(out_info.Item2);
             var record_bytes = out_info.Item1.ToArray();

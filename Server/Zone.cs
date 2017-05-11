@@ -222,19 +222,14 @@ namespace DNSServer
 							}
 
 
-							IPAddress address;
+							IPv4Address address;
 							try
 							{
-								address = IPAddress.Parse(entry.Attributes["address"].Value);
+								address = IPv4Address.Parse(entry.Attributes["address"].Value);
 							}
 							catch (FormatException)
 							{
 								throw new InvalidDataException(entry.Attributes["address"].Value + " is not a valid IPv4 address");
-							}
-
-							if (address.AddressFamily != AddressFamily.InterNetwork)
-							{
-								throw new InvalidDataException("A record requires IPv4 address");
 							}
 
 							resource = new AResource(address);

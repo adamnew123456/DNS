@@ -465,9 +465,17 @@ namespace DNSProtocol
 		/**
 		 * Reads an IPv4 address from the input stream.
 		 */
-		public IPAddress ReadIPv4Address()
+		public IPv4Address ReadIPv4Address()
 		{
-			return new IPAddress(ReadBytes(4));
+			return new IPv4Address(ReadBytes(4));
+		}
+
+		/**
+		 * Reads an IPv6 address from the input stream.
+		 */
+		public IPv6Address ReadIPv6Address()
+		{
+			return new IPv6Address(ReadBytes(16));
 		}
 
         /**
@@ -574,13 +582,16 @@ namespace DNSProtocol
 		/**
 		 * Writes an IPv4 address to the input stream.
 		 */
-		public void WriteIPv4Address(IPAddress address)
+		public void WriteIPv4Address(IPv4Address address)
 		{
-			if (address.AddressFamily != AddressFamily.InterNetwork)
-			{
-				throw new FormatException("Cannot serialize IPv6 addresses via WriteIPv4Address");
-			}
+			WriteBytes(address.GetAddressBytes());
+		}
 
+		/**
+		 * Writes an IPv6 address to the input stream.
+		 */
+		public void WriteIPv6Address(IPv6Address address)
+		{
 			WriteBytes(address.GetAddressBytes());
 		}
 
@@ -701,4 +712,34 @@ namespace DNSProtocol
         }
     }
 
+	/**
+	 * A wrapper around IPAddress that allows only IPv4 addresses.
+	 */
+	public class IPv4Address: IPAddress
+	{
+		public IPv4Address(int new_address): base((long)new_address)
+		{
+			if (AddressFamily != AddressFamily.InterNetwork)
+			{
+				throw new ArgumentException(this + " is not a valid IPv4 address");
+			}
+		}
+
+		public IPv4Address(byte[] address) : base(address)
+		{
+			if (AddressFamily != AddressFamily.InterNetwork)
+			{
+				throw new ArgumentException(this + " is not a valid IPv4 address");
+			}
+		}
+
+		public IPv4Address(IPAddress address) : this(address.GetAddressBytes())
+		{
+		}
+
+		public static new IPv4Address Parse(string address)
+		{
+			return new IPv4Address(IPAddress.Parse(address));
+		}
+	}
 }

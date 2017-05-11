@@ -60,7 +60,7 @@ namespace DNSResolver
 				new Domain("example.com"),
 				AddressClass.INTERNET,
 				10,
-				new AResource(IPAddress.Parse("192.168.0.1")));
+				new AResource(IPv4Address.Parse("192.168.0.1")));
 
 			var ns_record = new DNSRecord(
 				new Domain("example.com"),
@@ -89,7 +89,7 @@ namespace DNSResolver
 				new Domain("example.com"),
 				AddressClass.INTERNET,
 				10,
-				new AResource(IPAddress.Parse("192.168.0.1")));
+				new AResource(IPv4Address.Parse("192.168.0.1")));
 
 			var ns_record = new DNSRecord(
 				new Domain("example.com"),
@@ -119,7 +119,7 @@ namespace DNSResolver
 				new Domain("example.com"),
 				AddressClass.INTERNET,
 				100,
-				new AResource(IPAddress.Parse("192.168.0.1")));
+				new AResource(IPv4Address.Parse("192.168.0.1")));
 
 			var ns_record = new DNSRecord(
 				new Domain("example.com"),
@@ -150,7 +150,7 @@ namespace DNSResolver
 				new Domain("example.com"),
 				AddressClass.INTERNET,
 				100,
-				new AResource(IPAddress.Parse("192.168.0.1")));
+				new AResource(IPv4Address.Parse("192.168.0.1")));
 
 			var ns_record = new DNSRecord(
 				new Domain("example.com"),

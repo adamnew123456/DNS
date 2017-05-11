@@ -176,7 +176,7 @@ namespace DNSProtocol
 				new Domain("example.com"),
 				AddressClass.INTERNET,
 				42,
-				new AResource(new IPAddress(new byte[] { 192, 168, 0, 1 })));
+				new AResource(IPv4Address.Parse("192.168.0.1")));
 
 			var packet = new DNSPacket(
 				42,
@@ -405,7 +405,7 @@ namespace DNSProtocol
 				new Domain("example.com"),
 				AddressClass.INTERNET,
 				42,
-				new AResource(new IPAddress(new byte[] { 192, 168, 0, 1 })));
+				new AResource(IPv4Address.Parse("192.168.0.1")));
 
 			var expected = new DNSPacket(
 				42,

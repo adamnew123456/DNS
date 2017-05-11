@@ -141,20 +141,20 @@ namespace DNSServer
 				new Domain("www.example.com"),
 				AddressClass.INTERNET,
 				42,
-				new AResource(IPAddress.Parse("192.168.0.1")));
+				new AResource(IPv4Address.Parse("192.168.0.1")));
 
 			var www_a_record_2 = new DNSRecord(
 				new Domain("www.example.com"),
 				AddressClass.INTERNET,
 				42,
-				new AResource(IPAddress.Parse("192.168.0.2")));
+				new AResource(IPv4Address.Parse("192.168.0.2")));
 
 			// Something that matches the class and record type, but not the domain
 			var www2_a_record = new DNSRecord(
 				new Domain("www2.example.com"),
 				AddressClass.INTERNET,
 				42,
-				new AResource(IPAddress.Parse("192.168.0.3")));
+				new AResource(IPv4Address.Parse("192.168.0.3")));
 
 			// Something that matches the domain and class, but not the record type
 			var www_cname_record = new DNSRecord(
@@ -240,7 +240,7 @@ namespace DNSServer
 				new Domain("www.example.com"),
 				AddressClass.INTERNET,
 				3600,
-				new AResource(IPAddress.Parse("192.168.0.1"))));
+				new AResource(IPv4Address.Parse("192.168.0.1"))));
 
 			Assert.That(zone.Records, Is.EquivalentTo(records));
 		}

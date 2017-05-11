@@ -4,7 +4,9 @@
 		 serialize="IPv4Address" indicates that ReadIPv4Address will be used to unserialize
 		     IPAddress values and WriteIPv4Address will be used to serialize them.
 		-->
-    <type name="IPAddress" eq="method" serialize="IPv4Address" />
+	<!-- eq="method" indicates that Equals will be used to compare IPAddress values  -->
+    <type name="IPv4Address" eq="method" serialize="IPv4Address" />
+	<type name="IPv6Address" eq="method" serialize="IPv6Address" />
 
 	<!-- eq="operator" indicates that == will be used to compare Domain values -->
     <type name="Domain" eq="operator" serialize="Domain" />
@@ -13,7 +15,7 @@
   </types>
 
   <rr name="A" type="HOST_ADDRESS">
-    <field name="Address" type="IPAddress" />
+    <field name="Address" type="IPv4Address" />
   </rr>
 
   <rr name="NS" type="NAME_SERVER">
