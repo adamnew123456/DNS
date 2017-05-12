@@ -74,6 +74,10 @@ currently, the zone is configured via an XML format:
 
         <A name="bobs-computer.lan" class="IN" ttl="86400"
            address="192.168.0.1" />
+        <A name="other-ns.lan" class="IN" ttl="86400"
+            address="192.168.0.2" />
+        <A name="smtp.lan" class="IN" ttl="86400"
+            address="192.168.0.2" />
 
         <AAAA name="bobs-computer.lan" class="IN" ttl="86400"
               address="2001:cafe:beef::" />
@@ -89,6 +93,10 @@ currently, the zone is configured via an XML format:
 
         <PTR name="1.0.168.192.in-addr.arpa" class="IN" ttl="86400"
              pointer="bobs-computer.lan" />
+        <PTR name="2.0.168.192.in-addr.arpa" class="IN" ttl="86400"
+             pointer="other-ns.lan" />
+        <PTR name="3.0.168.192.in-addr.arpa" class="IN" ttl="86400"
+             pointer="smtp.lan" />
     </zone>
 
 Then, start up the server by giving the name of the zone file, the IP address
