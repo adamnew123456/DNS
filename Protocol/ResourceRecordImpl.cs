@@ -5,15 +5,15 @@ using System.Net;
 
 namespace DNSProtocol
 {
-    class AResource : IDNSResource 
-    {
+    public class AResource : IDNSResource 
+    {        
 	    public ResourceRecordType Type
 	    {
 		    get { return ResourceRecordType.HOST_ADDRESS; }
 	    }
 
-	    public readonly IPAddress Address;
-        public AResource(IPAddress Address_) {
+	    public readonly IPv4Address Address;
+        public AResource(IPv4Address Address_) {
 		    Address = Address_;
 		}
 
@@ -70,8 +70,73 @@ namespace DNSProtocol
 			);
 		}
 	}
-    class NSResource : IDNSResource 
-    {
+    public class AAAAResource : IDNSResource 
+    {        
+	    public ResourceRecordType Type
+	    {
+		    get { return ResourceRecordType.HOST_6ADDRESS; }
+	    }
+
+	    public readonly IPv6Address Address;
+        public AAAAResource(IPv6Address Address_) {
+		    Address = Address_;
+		}
+
+		public override bool Equals(object other)
+		{
+
+			if (!(other is IDNSResource))
+			{
+				return false;
+			}
+
+			return Equals((IDNSResource)other);
+		}
+
+		public bool Equals(IDNSResource other)
+		{
+			if (!(other is AAAAResource))
+			{
+				return false;
+			}
+
+			var other_resource = (AAAAResource)other;
+			return
+                 this.Address.Equals(other_resource.Address) 
+            ;
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked {
+				int hash = 17;
+                
+                hash = hash * 29 + Address.GetHashCode();
+				return hash;
+			}
+		}
+
+		public override string ToString()
+		{
+			string buffer = "AAAA[";
+            buffer += " Address=" + Address;
+			return buffer + "]";
+		}
+
+		public void Serialize(DNSOutputStream stream)
+		{
+          stream.WriteIPv6Address(Address);
+		}
+
+		public static AAAAResource Unserialize(DNSInputStream stream, UInt16 size)
+		{
+			return new AAAAResource(
+				stream.ReadIPv6Address()
+			);
+		}
+	}
+    public class NSResource : IDNSResource 
+    {        
 	    public ResourceRecordType Type
 	    {
 		    get { return ResourceRecordType.NAME_SERVER; }
@@ -135,8 +200,8 @@ namespace DNSProtocol
 			);
 		}
 	}
-    class SOAResource : IDNSResource 
-    {
+    public class SOAResource : IDNSResource 
+    {        
 	    public ResourceRecordType Type
 	    {
 		    get { return ResourceRecordType.START_OF_AUTHORITY; }
@@ -242,8 +307,8 @@ namespace DNSProtocol
 			);
 		}
 	}
-    class CNAMEResource : IDNSResource 
-    {
+    public class CNAMEResource : IDNSResource 
+    {        
 	    public ResourceRecordType Type
 	    {
 		    get { return ResourceRecordType.CANONICAL_NAME; }
@@ -307,8 +372,8 @@ namespace DNSProtocol
 			);
 		}
 	}
-    class MXResource : IDNSResource 
-    {
+    public class MXResource : IDNSResource 
+    {        
 	    public ResourceRecordType Type
 	    {
 		    get { return ResourceRecordType.MAIL_EXCHANGE; }
@@ -376,6 +441,71 @@ namespace DNSProtocol
 			return new MXResource(
 				stream.ReadUInt16()
                 ,				stream.ReadDomain()
+			);
+		}
+	}
+    public class PTRResource : IDNSResource 
+    {        
+	    public ResourceRecordType Type
+	    {
+		    get { return ResourceRecordType.POINTER; }
+	    }
+
+	    public readonly Domain Pointer;
+        public PTRResource(Domain Pointer_) {
+		    Pointer = Pointer_;
+		}
+
+		public override bool Equals(object other)
+		{
+
+			if (!(other is IDNSResource))
+			{
+				return false;
+			}
+
+			return Equals((IDNSResource)other);
+		}
+
+		public bool Equals(IDNSResource other)
+		{
+			if (!(other is PTRResource))
+			{
+				return false;
+			}
+
+			var other_resource = (PTRResource)other;
+			return
+                 this.Pointer == other_resource.Pointer 
+            ;
+		}
+
+		public override int GetHashCode()
+		{
+			unchecked {
+				int hash = 17;
+                
+                hash = hash * 29 + Pointer.GetHashCode();
+				return hash;
+			}
+		}
+
+		public override string ToString()
+		{
+			string buffer = "PTR[";
+            buffer += " Pointer=" + Pointer;
+			return buffer + "]";
+		}
+
+		public void Serialize(DNSOutputStream stream)
+		{
+          stream.WriteDomain(Pointer);
+		}
+
+		public static PTRResource Unserialize(DNSInputStream stream, UInt16 size)
+		{
+			return new PTRResource(
+				stream.ReadDomain()
 			);
 		}
 	}
